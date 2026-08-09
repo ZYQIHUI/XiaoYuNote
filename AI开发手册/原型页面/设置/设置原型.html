@@ -1,0 +1,2227 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>AI 智能便签 - 设置</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <script src="https://unpkg.com/lucide@latest"></script>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        fontFamily: {
+                            sans: [
+                                "Inter",
+                                "SF Pro Display",
+                                "-apple-system",
+                                "BlinkMacSystemFont",
+                                "Segoe UI",
+                                "Roboto",
+                                "PingFang SC",
+                                "sans-serif",
+                            ],
+                        },
+                        boxShadow: {
+                            modal:
+                                "0 24px 80px rgba(15, 23, 42, 0.12), 0 4px 18px rgba(15, 23, 42, 0.06)",
+                        },
+                    },
+                },
+            };
+        </script>
+        <style>
+            body {
+                background-color: #fcfcfd;
+                color: #1e293b;
+                -webkit-font-smoothing: antialiased;
+            }
+            .no-scrollbar::-webkit-scrollbar {
+                display: none;
+            }
+            .no-scrollbar {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+            .settings-page {
+                display: none;
+            }
+            .settings-page.active {
+                display: block;
+            }
+            .modal {
+                display: none;
+            }
+            .modal.active {
+                display: flex;
+            }
+            #providers :is(input, button, span, p, label),
+            #models :is(button, span),
+            #hotkeys :is(button, div),
+            #about :is(button, span, div) {
+                font-size: 13px !important;
+            }
+            #providers h2,
+            #providers h3,
+            #models h2,
+            #models h3,
+            #hotkeys h2,
+            #about h2,
+            #about h3,
+            #about .about-brand {
+                font-size: 15px !important;
+            }
+            #models p {
+                font-size: 12px !important;
+            }
+            #providers aside {
+                width: 280px !important;
+                padding: 20px 16px !important;
+            }
+            #providers aside button {
+                height: 36px !important;
+                border-radius: 12px !important;
+            }
+            #providers .h-12,
+            #models .h-14,
+            #hotkeys .h-12,
+            #about .h-14 {
+                height: 40px !important;
+            }
+            #providers .h-11,
+            #models .h-9,
+            #hotkeys .h-9 {
+                height: 34px !important;
+            }
+            #models {
+                max-width: 1080px !important;
+            }
+            #models .space-y-5 {
+                row-gap: 14px !important;
+            }
+            #models .space-y-5 > div,
+            #hotkeys > div:last-child,
+            #about > div {
+                border-radius: 18px !important;
+            }
+            #models .space-y-5 > div {
+                padding: 16px !important;
+            }
+            #models .mb-4,
+            #hotkeys .mb-5,
+            #about .mb-5,
+            #about .mb-6 {
+                margin-bottom: 12px !important;
+            }
+            #models .w-8.h-8,
+            #hotkeys .w-9.h-9,
+            #about .w-9.h-9 {
+                width: 28px !important;
+                height: 28px !important;
+            }
+            #hotkeys {
+                max-width: 1080px !important;
+            }
+            #hotkeys .min-h-\[76px\] {
+                min-height: 56px !important;
+            }
+            #hotkeys .grid-cols-\[1fr_340px_42px_42px_64px\] {
+                grid-template-columns: 1fr 280px 34px 34px 48px !important;
+                gap: 10px !important;
+            }
+            #providers .switch,
+            #hotkeys .switch {
+                width: 44px !important;
+                height: 24px !important;
+            }
+            #providers .switch span,
+            #hotkeys .switch span {
+                width: 20px !important;
+                height: 20px !important;
+            }
+            #about {
+                max-width: 1080px !important;
+            }
+            #about .px-6 {
+                padding-left: 20px !important;
+                padding-right: 20px !important;
+            }
+            #about .py-6,
+            #about .py-5 {
+                padding-top: 16px !important;
+                padding-bottom: 16px !important;
+            }
+            #about .w-14.h-14 {
+                width: 44px !important;
+                height: 44px !important;
+            }
+            #about .w-9.h-9 {
+                width: 28px !important;
+                height: 28px !important;
+            }
+        </style>
+    </head>
+    <body class="flex h-screen w-full overflow-hidden font-sans antialiased">
+        <aside
+            class="w-20 h-full flex flex-col justify-between py-7 px-4 select-none z-10 shrink-0 bg-[#fcfcfd]"
+        >
+            <nav class="flex flex-col items-center gap-3">
+                <a
+                    href="#"
+                    aria-label="首页"
+                    title="首页"
+                    class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-50 transition-colors"
+                >
+                    <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                </a>
+                <a
+                    href="#"
+                    aria-label="便签"
+                    title="便签"
+                    class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-50 transition-colors"
+                >
+                    <i data-lucide="sticky-note" class="w-4 h-4"></i>
+                </a>
+                <a
+                    href="#"
+                    aria-label="回忆本"
+                    title="回忆本"
+                    class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-50 transition-colors"
+                >
+                    <i data-lucide="book-open" class="w-4 h-4"></i>
+                </a>
+            </nav>
+
+            <a
+                href="#"
+                aria-label="设置"
+                title="设置"
+                class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-900 bg-slate-100/80 transition-colors"
+            >
+                <i data-lucide="settings" class="w-4 h-4 text-slate-800"></i>
+            </a>
+        </aside>
+
+        <aside
+            class="w-[220px] h-full bg-[#f8fafc] border-r border-slate-200/50 px-4 py-7 shrink-0 select-none"
+        >
+            <div class="text-[13px] font-semibold text-slate-900 px-3 mb-5">
+                设置
+            </div>
+            <nav class="flex flex-col gap-1">
+                <button
+                    data-page="preferences"
+                    class="settings-nav flex items-center gap-2.5 h-9 px-3 rounded-xl text-[13px] font-medium text-slate-900 bg-slate-100/80 transition-colors"
+                >
+                    <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>
+                    偏好设置
+                </button>
+                <button
+                    data-page="providers"
+                    class="settings-nav flex items-center gap-2.5 h-9 px-3 rounded-xl text-[13px] font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-100/60 transition-colors"
+                >
+                    <i data-lucide="plug-zap" class="w-3.5 h-3.5"></i>
+                    供应商
+                </button>
+                <button
+                    data-page="models"
+                    class="settings-nav flex items-center gap-2.5 h-9 px-3 rounded-xl text-[13px] font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-100/60 transition-colors"
+                >
+                    <i data-lucide="bot" class="w-3.5 h-3.5"></i>
+                    默认模型
+                </button>
+                <button
+                    data-page="hotkeys"
+                    class="settings-nav flex items-center gap-2.5 h-9 px-3 rounded-xl text-[13px] font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-100/60 transition-colors"
+                >
+                    <i data-lucide="keyboard" class="w-3.5 h-3.5"></i>
+                    快捷键
+                </button>
+                <button
+                    data-page="stats"
+                    class="settings-nav flex items-center gap-2.5 h-9 px-3 rounded-xl text-[13px] font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-100/60 transition-colors"
+                >
+                    <i data-lucide="chart-column" class="w-3.5 h-3.5"></i>
+                    统计
+                </button>
+                <button
+                    data-page="about"
+                    class="settings-nav flex items-center gap-2.5 h-9 px-3 rounded-xl text-[13px] font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-100/60 transition-colors"
+                >
+                    <i data-lucide="info" class="w-3.5 h-3.5"></i>
+                    关于
+                </button>
+            </nav>
+        </aside>
+
+        <main class="flex-1 h-full bg-white overflow-hidden flex flex-col">
+            <div class="flex-1 overflow-y-auto no-scrollbar">
+                <section id="preferences" class="settings-page active px-8 py-8">
+                    <div class="max-w-[1080px] mx-auto space-y-5">
+                        <div
+                            class="bg-white border border-slate-200/70 rounded-[18px] overflow-hidden"
+                        >
+                            <div class="px-6 py-4">
+                                <h2 class="text-[15px] font-semibold text-slate-900">
+                                    个人信息
+                                </h2>
+                            </div>
+                            <div class="border-t border-slate-100">
+                                <div
+                                    class="min-h-[58px] px-6 flex items-center justify-between gap-8 border-b border-slate-100"
+                                >
+                                    <div class="text-[13px] font-medium text-slate-800">
+                                        每日工作时长
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <input
+                                            value="8"
+                                            class="w-20 h-9 rounded-xl border border-slate-200 px-3 text-right text-[13px] outline-none focus:border-slate-300"
+                                        />
+                                        <span class="text-xs text-slate-400"
+                                            >小时</span
+                                        >
+                                    </div>
+                                </div>
+                                <div
+                                    class="min-h-[58px] px-6 flex items-center justify-between gap-8 border-b border-slate-100"
+                                >
+                                    <div class="text-[13px] font-medium text-slate-800">
+                                        日薪
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <input
+                                            value="800"
+                                            class="w-28 h-9 rounded-xl border border-slate-200 px-3 text-right text-[13px] outline-none focus:border-slate-300"
+                                        />
+                                        <span class="text-xs text-slate-400"
+                                            >¥</span
+                                        >
+                                    </div>
+                                </div>
+                                <div
+                                    class="min-h-[58px] px-6 flex items-center justify-between gap-8"
+                                >
+                                    <div class="text-[13px] font-medium text-slate-800">
+                                        所在行业
+                                    </div>
+                                    <button
+                                        class="h-9 min-w-36 px-3 rounded-xl border border-slate-200 text-[13px] text-slate-700 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors"
+                                    >
+                                        软件开发
+                                        <i
+                                            data-lucide="chevron-down"
+                                            class="w-3.5 h-3.5 text-slate-400"
+                                        ></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            class="bg-white border border-slate-200/70 rounded-[18px] overflow-hidden"
+                        >
+                            <div class="px-6 py-4">
+                                <h2 class="text-[15px] font-semibold text-slate-900">
+                                    字体与显示
+                                </h2>
+                            </div>
+                            <div class="border-t border-slate-100">
+                                <div
+                                    class="min-h-[58px] px-6 flex items-center justify-between gap-8 border-b border-slate-100"
+                                >
+                                    <div class="text-[13px] font-medium text-slate-800">
+                                        应用字体
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button
+                                            id="openFontModal"
+                                            class="h-9 min-w-32 px-3 rounded-xl border border-slate-200 text-[13px] text-slate-700 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors"
+                                        >
+                                            系统默认
+                                            <i
+                                                data-lucide="chevron-down"
+                                                class="w-3.5 h-3.5 text-slate-400"
+                                            ></i>
+                                        </button>
+                                        <button
+                                            class="w-9 h-9 rounded-xl border border-slate-200 text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors flex items-center justify-center"
+                                            title="重置"
+                                        >
+                                            <i
+                                                data-lucide="rotate-ccw"
+                                                class="w-3.5 h-3.5"
+                                            ></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div
+                                    class="min-h-[58px] px-6 flex items-center justify-between gap-8"
+                                >
+                                    <div class="text-[13px] font-medium text-slate-800">
+                                        字体大小
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <input
+                                            value="100"
+                                            class="w-20 h-9 rounded-xl border border-slate-200 px-3 text-right text-[13px] outline-none focus:border-slate-300"
+                                        />
+                                        <span class="text-xs text-slate-400"
+                                            >%</span
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            class="bg-white border border-slate-200/70 rounded-[18px] overflow-hidden"
+                        >
+                            <div class="px-6 py-4">
+                                <h2 class="text-[15px] font-semibold text-slate-900">
+                                    行为与启动
+                                </h2>
+                            </div>
+                            <div class="border-t border-slate-100">
+                                <div
+                                    class="min-h-[58px] px-6 flex items-center justify-between border-b border-slate-100"
+                                >
+                                    <div class="text-[13px] font-medium text-slate-800">
+                                        开机自启动
+                                    </div>
+                                    <button
+                                        class="switch w-11 h-6 rounded-full bg-slate-900 relative transition-colors"
+                                        aria-label="开机自启动"
+                                    >
+                                        <span
+                                            class="absolute right-0.5 top-0.5 w-5 h-5 rounded-full bg-white"
+                                        ></span>
+                                    </button>
+                                </div>
+                                <div
+                                    class="min-h-[58px] px-6 flex items-center justify-between"
+                                >
+                                    <div class="text-[13px] font-medium text-slate-800">
+                                        显示更新
+                                    </div>
+                                    <button
+                                        class="switch w-11 h-6 rounded-full bg-slate-200 relative transition-colors"
+                                        aria-label="显示更新"
+                                    >
+                                        <span
+                                            class="absolute left-0.5 top-0.5 w-5 h-5 rounded-full bg-white"
+                                        ></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            class="bg-white border border-slate-200/70 rounded-[18px] overflow-hidden"
+                        >
+                            <div class="px-6 py-4">
+                                <h2 class="text-[15px] font-semibold text-slate-900">
+                                    组件设置
+                                </h2>
+                            </div>
+                            <div class="border-t border-slate-100">
+                                <div
+                                    class="min-h-[58px] px-6 flex items-center justify-between"
+                                >
+                                    <div class="text-[13px] font-medium text-slate-800">
+                                        显示桌面组件
+                                    </div>
+                                    <button
+                                        class="switch w-11 h-6 rounded-full bg-slate-900 relative transition-colors"
+                                        aria-label="显示桌面组件"
+                                    >
+                                        <span
+                                            class="absolute right-0.5 top-0.5 w-5 h-5 rounded-full bg-white"
+                                        ></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section
+                    id="providers"
+                    class="settings-page h-full overflow-hidden"
+                >
+                    <div class="h-full flex bg-white">
+                        <aside
+                            class="w-[324px] h-full border-r border-slate-200/70 px-5 py-7 flex flex-col"
+                        >
+                            <div
+                                class="h-10 rounded-[15px] bg-slate-100/80 flex items-center px-3 mb-4"
+                            >
+                                <i
+                                    data-lucide="search"
+                                    class="w-4 h-4 text-slate-400 mr-2"
+                                ></i>
+                                <input
+                                    placeholder="搜索供应商或分组"
+                                    class="bg-transparent outline-none text-[13px] text-slate-700 placeholder-slate-400 w-full"
+                                />
+                            </div>
+
+                            <div class="flex-1 overflow-y-auto no-scrollbar pr-1 space-y-1.5">
+                                <button
+                                    class="w-full h-11 rounded-[15px] bg-slate-100/90 flex items-center gap-3 px-3 text-left"
+                                >
+                                    <span
+                                        class="w-6 h-6 rounded-full bg-white border border-slate-200 flex items-center justify-center"
+                                    >
+                                        <i
+                                            data-lucide="bot"
+                                            class="w-3.5 h-3.5 text-slate-700"
+                                        ></i>
+                                    </span>
+                                    <span
+                                        class="flex-1 min-w-0 text-[15px] font-semibold text-slate-800"
+                                        >OpenAI</span
+                                    >
+                                    <span
+                                        class="px-2 py-0.5 rounded-lg bg-emerald-50 text-[12px] font-semibold text-emerald-600"
+                                        >启用</span
+                                    >
+                                </button>
+                                <button
+                                    class="w-full h-11 rounded-[15px] hover:bg-slate-50 flex items-center gap-3 px-3 text-left transition-colors"
+                                >
+                                    <span
+                                        class="w-6 h-6 rounded-full bg-slate-100 text-[11px] font-semibold text-slate-700 flex items-center justify-center"
+                                        >A</span
+                                    >
+                                    <span
+                                        class="flex-1 min-w-0 text-[15px] font-semibold text-slate-700"
+                                        >aionew</span
+                                    >
+                                    <span
+                                        class="px-2 py-0.5 rounded-lg bg-emerald-50 text-[12px] font-semibold text-emerald-600"
+                                        >启用</span
+                                    >
+                                </button>
+                                <button
+                                    class="w-full h-11 rounded-[15px] hover:bg-slate-50 flex items-center gap-3 px-3 text-left transition-colors"
+                                >
+                                    <span
+                                        class="w-6 h-6 rounded-full bg-white border border-slate-200 flex items-center justify-center"
+                                    >
+                                        <i
+                                            data-lucide="bot"
+                                            class="w-3.5 h-3.5 text-slate-600"
+                                        ></i>
+                                    </span>
+                                    <span
+                                        class="flex-1 min-w-0 text-[15px] font-semibold text-slate-700"
+                                        >OpenAI</span
+                                    >
+                                    <span
+                                        class="px-2 py-0.5 rounded-lg bg-emerald-50 text-[12px] font-semibold text-emerald-600"
+                                        >启用</span
+                                    >
+                                </button>
+                                <button
+                                    class="w-full h-11 rounded-[15px] hover:bg-slate-50 flex items-center gap-3 px-3 text-left transition-colors"
+                                >
+                                    <span
+                                        class="w-6 h-6 rounded-full bg-white text-[14px] font-bold text-blue-500 flex items-center justify-center"
+                                        >G</span
+                                    >
+                                    <span
+                                        class="flex-1 min-w-0 text-[15px] font-semibold text-slate-700"
+                                        >艾可Google</span
+                                    >
+                                    <span
+                                        class="px-2 py-0.5 rounded-lg bg-emerald-50 text-[12px] font-semibold text-emerald-600"
+                                        >启用</span
+                                    >
+                                </button>
+                                <button
+                                    class="w-full h-11 rounded-[15px] hover:bg-slate-50 flex items-center gap-3 px-3 text-left transition-colors"
+                                >
+                                    <span
+                                        class="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center"
+                                    >
+                                        <i
+                                            data-lucide="sparkles"
+                                            class="w-3.5 h-3.5 text-blue-500"
+                                        ></i>
+                                    </span>
+                                    <span
+                                        class="flex-1 min-w-0 text-[15px] font-semibold text-slate-700"
+                                        >RuoliGemini</span
+                                    >
+                                    <span
+                                        class="px-2 py-0.5 rounded-lg bg-emerald-50 text-[12px] font-semibold text-emerald-600"
+                                        >启用</span
+                                    >
+                                </button>
+                                <button
+                                    class="w-full h-11 rounded-[15px] hover:bg-slate-50 flex items-center gap-3 px-3 text-left transition-colors"
+                                >
+                                    <span
+                                        class="w-6 h-6 rounded-full bg-slate-100 text-[8px] font-bold text-slate-500 flex items-center justify-center"
+                                        >MIMO</span
+                                    >
+                                    <span
+                                        class="flex-1 min-w-0 text-[15px] font-semibold text-slate-700"
+                                        >Mimo</span
+                                    >
+                                    <span
+                                        class="px-2 py-0.5 rounded-lg bg-emerald-50 text-[12px] font-semibold text-emerald-600"
+                                        >启用</span
+                                    >
+                                </button>
+                                <button
+                                    class="w-full h-11 rounded-[15px] hover:bg-slate-50 flex items-center gap-3 px-3 text-left transition-colors"
+                                >
+                                    <span
+                                        class="w-6 h-6 rounded-full bg-slate-100 text-[11px] font-semibold text-slate-700 flex items-center justify-center"
+                                        >G</span
+                                    >
+                                    <span
+                                        class="flex-1 min-w-0 text-[15px] font-semibold text-slate-700"
+                                        >GuoLi</span
+                                    >
+                                    <span
+                                        class="px-2 py-0.5 rounded-lg bg-orange-50 text-[12px] font-semibold text-orange-500"
+                                        >禁用</span
+                                    >
+                                </button>
+                                <button
+                                    class="w-full h-11 rounded-[15px] hover:bg-slate-50 flex items-center gap-3 px-3 text-left transition-colors"
+                                >
+                                    <span
+                                        class="w-6 h-6 rounded-full bg-slate-100 text-[11px] font-semibold text-slate-700 flex items-center justify-center"
+                                        >I</span
+                                    >
+                                    <span
+                                        class="flex-1 min-w-0 text-[15px] font-semibold text-slate-700"
+                                        >IKUN</span
+                                    >
+                                    <span
+                                        class="px-2 py-0.5 rounded-lg bg-emerald-50 text-[12px] font-semibold text-emerald-600"
+                                        >启用</span
+                                    >
+                                </button>
+                                <button
+                                    class="w-full h-11 rounded-[15px] hover:bg-slate-50 flex items-center gap-3 px-3 text-left transition-colors"
+                                >
+                                    <span
+                                        class="w-6 h-6 rounded-full bg-slate-100 text-[11px] font-semibold text-slate-700 flex items-center justify-center"
+                                        >R</span
+                                    >
+                                    <span
+                                        class="flex-1 min-w-0 text-[15px] font-semibold text-slate-700"
+                                        >RuoliCN</span
+                                    >
+                                    <span
+                                        class="px-2 py-0.5 rounded-lg bg-emerald-50 text-[12px] font-semibold text-emerald-600"
+                                        >启用</span
+                                    >
+                                </button>
+                                <button
+                                    class="w-full h-11 rounded-[15px] hover:bg-slate-50 flex items-center gap-3 px-3 text-left transition-colors"
+                                >
+                                    <span
+                                        class="w-6 h-6 rounded-full bg-white border border-slate-200 flex items-center justify-center"
+                                    >
+                                        <i
+                                            data-lucide="route"
+                                            class="w-3.5 h-3.5 text-slate-700"
+                                        ></i>
+                                    </span>
+                                    <span
+                                        class="flex-1 min-w-0 text-[15px] font-semibold text-slate-700"
+                                        >OpenRouter</span
+                                    >
+                                    <span
+                                        class="px-2 py-0.5 rounded-lg bg-emerald-50 text-[12px] font-semibold text-emerald-600"
+                                        >启用</span
+                                    >
+                                </button>
+                                <button
+                                    class="w-full h-11 rounded-[15px] hover:bg-slate-50 flex items-center gap-3 px-3 text-left transition-colors"
+                                >
+                                    <span
+                                        class="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center"
+                                    >
+                                        <i
+                                            data-lucide="fish"
+                                            class="w-3.5 h-3.5 text-blue-500"
+                                        ></i>
+                                    </span>
+                                    <span
+                                        class="flex-1 min-w-0 text-[15px] font-semibold text-slate-700"
+                                        >DeepSeek</span
+                                    >
+                                    <span
+                                        class="px-2 py-0.5 rounded-lg bg-emerald-50 text-[12px] font-semibold text-emerald-600"
+                                        >启用</span
+                                    >
+                                </button>
+                            </div>
+
+                            <button
+                                id="openProviderModal"
+                                class="h-10 mt-5 rounded-[15px] border border-slate-300 text-[15px] font-semibold text-slate-900 hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
+                            >
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                                添加
+                            </button>
+                        </aside>
+
+                        <div class="flex-1 overflow-y-auto no-scrollbar px-6 py-7">
+                            <div class="max-w-[1120px] mx-auto">
+                                <div
+                                    class="h-11 border-b border-slate-100 flex items-start justify-between"
+                                >
+                                    <div class="flex items-center gap-3">
+                                        <h2 class="text-[16px] font-semibold text-slate-900">
+                                            OpenAI
+                                        </h2>
+                                        <button
+                                            class="w-8 h-8 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors flex items-center justify-center"
+                                            aria-label="供应商设置"
+                                        >
+                                            <i data-lucide="settings" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                    <button
+                                        class="switch w-12 h-7 rounded-full bg-slate-900 relative transition-colors"
+                                        aria-label="启用供应商"
+                                    >
+                                        <span
+                                            class="absolute right-0.5 top-0.5 w-6 h-6 rounded-full bg-white"
+                                        ></span>
+                                    </button>
+                                </div>
+
+                                <div class="pt-6 space-y-5">
+                                    <label class="block">
+                                        <div
+                                            class="mb-2 flex items-center justify-between"
+                                        >
+                                            <span
+                                                class="text-[13px] font-semibold text-slate-700"
+                                                >API Key</span
+                                            >
+                                            <button
+                                                class="h-7 px-2 rounded-lg text-[13px] font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors flex items-center gap-2"
+                                            >
+                                                <i
+                                                    data-lucide="heart-pulse"
+                                                    class="w-4 h-4"
+                                                ></i>
+                                                测试
+                                            </button>
+                                        </div>
+                                        <div
+                                            class="h-12 rounded-[14px] bg-slate-50 border border-slate-200/80 flex items-center px-4"
+                                        >
+                                            <input
+                                                type="password"
+                                                value="sk-••••••••••••••••••••••••••••"
+                                                class="flex-1 bg-transparent outline-none text-[15px] text-slate-700"
+                                            />
+                                            <button
+                                                class="w-8 h-8 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-white flex items-center justify-center"
+                                                aria-label="显示 API Key"
+                                            >
+                                                <i data-lucide="eye" class="w-4 h-4"></i>
+                                            </button>
+                                        </div>
+                                    </label>
+
+                                    <label class="block">
+                                        <span
+                                            class="block mb-2 text-[13px] font-semibold text-slate-700"
+                                            >API Base URL</span
+                                        >
+                                        <input
+                                            value="http://127.0.0.1:1234/v1"
+                                            class="w-full h-12 rounded-[14px] bg-slate-50 border border-slate-200/80 px-4 text-[15px] text-slate-700 outline-none focus:border-slate-300"
+                                        />
+                                    </label>
+
+                                    <label class="block">
+                                        <span
+                                            class="block mb-2 text-[13px] font-semibold text-slate-700"
+                                            >API 路径</span
+                                        >
+                                        <input
+                                            value="/chat/completions"
+                                            class="w-full h-12 rounded-[14px] bg-slate-50 border border-slate-200/80 px-4 text-[15px] text-slate-700 outline-none focus:border-slate-300"
+                                        />
+                                    </label>
+                                </div>
+
+                                <div class="mt-7">
+                                    <div
+                                        class="h-9 flex items-center justify-between"
+                                    >
+                                        <div class="flex items-center gap-2">
+                                            <h3
+                                                class="text-[14px] font-semibold text-slate-900"
+                                            >
+                                                模型
+                                            </h3>
+                                            <span
+                                                class="w-6 h-6 rounded-full bg-slate-100 text-xs font-semibold text-slate-500 flex items-center justify-center"
+                                                >1</span
+                                            >
+                                        </div>
+                                        <div class="flex items-center gap-4 text-slate-600">
+                                            <button
+                                                class="w-7 h-7 rounded-lg hover:bg-slate-50 hover:text-slate-900 flex items-center justify-center"
+                                                aria-label="搜索模型"
+                                            >
+                                                <i data-lucide="search" class="w-4 h-4"></i>
+                                            </button>
+                                            <button
+                                                class="w-7 h-7 rounded-lg hover:bg-slate-50 hover:text-slate-900 flex items-center justify-center"
+                                                aria-label="选择模型"
+                                            >
+                                                <i data-lucide="square-check" class="w-4 h-4"></i>
+                                            </button>
+                                            <button
+                                                class="w-7 h-7 rounded-lg hover:bg-slate-50 hover:text-slate-900 flex items-center justify-center"
+                                                aria-label="添加模型"
+                                            >
+                                                <i data-lucide="plus" class="w-4 h-4"></i>
+                                            </button>
+                                            <button
+                                                class="w-7 h-7 rounded-lg hover:bg-slate-50 hover:text-slate-900 flex items-center justify-center"
+                                                aria-label="删除模型"
+                                            >
+                                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                            </button>
+                                            <button
+                                                class="h-7 rounded-lg hover:bg-slate-50 hover:text-slate-900 flex items-center gap-1.5 text-[13px] font-medium"
+                                            >
+                                                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                                                获取
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="mt-2 rounded-[16px] border border-slate-200 overflow-hidden"
+                                    >
+                                        <div
+                                            class="h-12 px-4 bg-slate-50/70 border-b border-slate-100 flex items-center gap-2"
+                                        >
+                                            <i
+                                                data-lucide="chevron-down"
+                                                class="w-4 h-4 text-slate-600"
+                                            ></i>
+                                            <span
+                                                class="text-[14px] font-semibold text-slate-900"
+                                                >qwen</span
+                                            >
+                                        </div>
+                                        <div
+                                            class="h-14 px-4 flex items-center justify-between"
+                                        >
+                                            <div class="flex items-center gap-3">
+                                                <span
+                                                    class="w-6 h-6 rounded-full bg-indigo-50 flex items-center justify-center"
+                                                >
+                                                    <i
+                                                        data-lucide="sparkles"
+                                                        class="w-3.5 h-3.5 text-indigo-500"
+                                                    ></i>
+                                                </span>
+                                                <span
+                                                    class="text-[14px] text-slate-600"
+                                                    >qwen/qwen3-1.7b</span
+                                                >
+                                            </div>
+                                            <div class="flex items-center gap-3 text-slate-600">
+                                                <button
+                                                    class="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center"
+                                                    aria-label="高级配置"
+                                                >
+                                                    <i data-lucide="hammer" class="w-3.5 h-3.5"></i>
+                                                </button>
+                                                <button
+                                                    class="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center"
+                                                    aria-label="能力配置"
+                                                >
+                                                    <i data-lucide="atom" class="w-3.5 h-3.5"></i>
+                                                </button>
+                                                <button
+                                                    id="openModelModal"
+                                                    class="w-7 h-7 rounded-lg hover:bg-slate-50 hover:text-slate-900 flex items-center justify-center"
+                                                    aria-label="模型参数"
+                                                >
+                                                    <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
+                                                </button>
+                                                <button
+                                                    class="w-7 h-7 rounded-lg hover:bg-slate-50 hover:text-slate-900 flex items-center justify-center"
+                                                    aria-label="移除模型"
+                                                >
+                                                    <i data-lucide="minus" class="w-4 h-4"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section
+                    id="models"
+                    class="settings-page px-8 py-8 max-w-[1180px] mx-auto w-full"
+                >
+                    <h2 class="text-[18px] font-medium text-slate-600 mb-6">
+                        默认模型
+                    </h2>
+                    <div class="space-y-5">
+                        <div
+                            class="bg-white border border-slate-200/70 rounded-[22px] p-5"
+                        >
+                            <div class="flex items-start justify-between gap-6 mb-4">
+                                <div>
+                                    <div class="flex items-center gap-3">
+                                        <i
+                                            data-lucide="sparkles"
+                                            class="w-5 h-5 text-slate-800"
+                                        ></i>
+                                        <h3
+                                            class="text-[18px] font-semibold text-slate-900"
+                                        >
+                                            智能生成模型
+                                        </h3>
+                                    </div>
+                                    <p class="mt-2 text-[14px] text-slate-500">
+                                        用于首页输入后的智能整理、总结与结构化生成。
+                                    </p>
+                                </div>
+                                <button
+                                    class="w-9 h-9 rounded-xl text-slate-700 hover:bg-slate-50 flex items-center justify-center"
+                                    aria-label="配置智能生成模型"
+                                >
+                                    <i data-lucide="settings" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                            <button
+                                class="w-full h-14 rounded-[16px] bg-slate-100/80 px-4 flex items-center gap-3 text-left hover:bg-slate-100 transition-colors"
+                            >
+                                <span
+                                    class="w-8 h-8 rounded-full bg-slate-200/80 text-[14px] font-semibold text-slate-900 flex items-center justify-center"
+                                    >已</span
+                                >
+                                <span class="text-[17px] font-semibold text-slate-900"
+                                    >OpenAI · GPT-4.1 mini</span
+                                >
+                            </button>
+                        </div>
+
+                        <div
+                            class="bg-white border border-slate-200/70 rounded-[22px] p-5"
+                        >
+                            <div class="flex items-start justify-between gap-6 mb-4">
+                                <div>
+                                    <div class="flex items-center gap-3">
+                                        <i
+                                            data-lucide="pen-line"
+                                            class="w-5 h-5 text-slate-800"
+                                        ></i>
+                                        <h3
+                                            class="text-[18px] font-semibold text-slate-900"
+                                        >
+                                            编辑补全模型
+                                        </h3>
+                                    </div>
+                                    <p class="mt-2 text-[14px] text-slate-500">
+                                        用于便签页的续写、润色、改写与编辑补全。
+                                    </p>
+                                </div>
+                                <button
+                                    class="w-9 h-9 rounded-xl text-slate-700 hover:bg-slate-50 flex items-center justify-center"
+                                    aria-label="配置编辑补全模型"
+                                >
+                                    <i data-lucide="settings" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                            <button
+                                class="w-full h-14 rounded-[16px] bg-slate-100/80 px-4 flex items-center gap-3 text-left hover:bg-slate-100 transition-colors"
+                            >
+                                <span
+                                    class="w-8 h-8 rounded-full bg-slate-200/80 text-[14px] font-semibold text-slate-900 flex items-center justify-center"
+                                    >已</span
+                                >
+                                <span class="text-[17px] font-semibold text-slate-900"
+                                    >OpenAI · GPT-4.1 mini</span
+                                >
+                            </button>
+                        </div>
+
+                        <div
+                            class="bg-white border border-slate-200/70 rounded-[22px] p-5"
+                        >
+                            <div class="flex items-start justify-between gap-6 mb-4">
+                                <div>
+                                    <div class="flex items-center gap-3">
+                                        <i
+                                            data-lucide="book-open"
+                                            class="w-5 h-5 text-slate-800"
+                                        ></i>
+                                        <h3
+                                            class="text-[18px] font-semibold text-slate-900"
+                                        >
+                                            回忆书模型
+                                        </h3>
+                                    </div>
+                                    <p class="mt-2 text-[14px] text-slate-500">
+                                        用于回忆书问答、记忆检索与个人记录整理。
+                                    </p>
+                                </div>
+                                <button
+                                    class="w-9 h-9 rounded-xl text-slate-700 hover:bg-slate-50 flex items-center justify-center"
+                                    aria-label="配置回忆书模型"
+                                >
+                                    <i data-lucide="settings" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                            <button
+                                class="w-full h-14 rounded-[16px] bg-slate-100/80 px-4 flex items-center gap-3 text-left hover:bg-slate-100 transition-colors"
+                            >
+                                <span
+                                    class="w-8 h-8 rounded-full bg-slate-200/80 text-[14px] font-semibold text-slate-900 flex items-center justify-center"
+                                    >已</span
+                                >
+                                <span class="text-[17px] font-semibold text-slate-900"
+                                    >OpenAI · GPT-4.1</span
+                                >
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <section
+                    id="hotkeys"
+                    class="settings-page px-8 py-8 max-w-[1180px] mx-auto w-full"
+                >
+                    <h2 class="text-[18px] font-medium text-slate-600 mb-6">
+                        快捷键
+                    </h2>
+                    <div
+                        class="bg-white border border-slate-200/70 rounded-[20px] px-4 py-2"
+                    >
+                        <div
+                            class="grid grid-cols-[1fr_280px_36px_36px_52px] items-center gap-3 min-h-[58px] px-2"
+                        >
+                            <div class="text-[13px] font-medium text-slate-800">
+                                显示/隐藏页面
+                            </div>
+                            <button
+                                class="h-10 rounded-[12px] border border-slate-300 bg-slate-50 px-3 text-left text-[13px] text-slate-500 hover:bg-slate-100/70 transition-colors"
+                            >
+                                按下快捷键
+                            </button>
+                            <button
+                                class="w-8 h-8 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center"
+                                aria-label="重置快捷键"
+                            >
+                                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                            </button>
+                            <button
+                                class="w-8 h-8 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center"
+                                aria-label="清除快捷键"
+                            >
+                                <i data-lucide="eraser" class="w-4 h-4"></i>
+                            </button>
+                            <button
+                                class="switch w-11 h-6 rounded-full bg-slate-900 relative transition-colors"
+                                aria-label="启用显示隐藏页面快捷键"
+                            >
+                                <span
+                                    class="absolute right-0.5 top-0.5 w-5 h-5 rounded-full bg-white"
+                                ></span>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="stats" class="settings-page px-8 py-8">
+                    <div class="max-w-[1080px] mx-auto">
+                        <div class="flex items-center gap-2 mb-6">
+                            <button
+                                class="h-8 px-3 rounded-full border border-slate-200 text-xs text-slate-600 hover:bg-slate-50"
+                            >
+                                全部
+                            </button>
+                            <button
+                                class="h-8 px-3 rounded-full bg-slate-900 text-white text-xs"
+                            >
+                                最近30天
+                            </button>
+                            <button
+                                class="h-8 px-3 rounded-full border border-slate-200 text-xs text-slate-600 hover:bg-slate-50"
+                            >
+                                上个月
+                            </button>
+                            <button
+                                class="h-8 px-3 rounded-full border border-slate-200 text-xs text-slate-600 hover:bg-slate-50"
+                            >
+                                上个季度
+                            </button>
+                            <button
+                                id="openDateModal"
+                                class="h-8 px-3 rounded-full border border-slate-200 text-xs text-slate-600 hover:bg-slate-50"
+                            >
+                                自定义
+                            </button>
+                        </div>
+
+                        <div
+                            class="bg-white border border-slate-200/70 rounded-[20px] p-5 mb-5"
+                        >
+                            <div
+                                class="flex items-center justify-between mb-4"
+                            >
+                                <h2
+                                    class="text-[13px] font-semibold text-slate-900"
+                                >
+                                    聊天热力图
+                                </h2>
+                            </div>
+                            <div class="overflow-x-auto no-scrollbar pt-4 pb-1">
+                                <div class="w-max">
+                                    <div
+                                        id="heatmapMonths"
+                                        class="ml-[30px] mb-2 grid gap-x-[5px] text-[13px] text-slate-400"
+                                    ></div>
+                                    <div class="flex gap-2">
+                                        <div
+                                            class="grid grid-rows-7 gap-[5px] w-[22px] shrink-0 text-[13px] text-slate-400"
+                                        >
+                                            <span class="h-3"></span>
+                                            <span class="h-3 leading-3">一</span>
+                                            <span class="h-3"></span>
+                                            <span class="h-3 leading-3">三</span>
+                                            <span class="h-3"></span>
+                                            <span class="h-3 leading-3">五</span>
+                                            <span class="h-3"></span>
+                                        </div>
+                                        <div
+                                            id="heatmap"
+                                            class="grid grid-flow-col grid-rows-7 gap-[5px] w-max"
+                                        ></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-5 gap-3 mb-5">
+                            <div
+                                class="rounded-[18px] border border-slate-200/70 bg-white p-4"
+                            >
+                                <div class="text-2xl font-semibold">128</div>
+                                <div class="text-xs text-slate-400 mt-1">
+                                    总结数
+                                </div>
+                            </div>
+                            <div
+                                class="rounded-[18px] border border-slate-200/70 bg-white p-4"
+                            >
+                                <div class="text-2xl font-semibold">431</div>
+                                <div class="text-xs text-slate-400 mt-1">
+                                    编辑补全次数
+                                </div>
+                            </div>
+                            <div
+                                class="rounded-[18px] border border-slate-200/70 bg-white p-4"
+                            >
+                                <div class="text-2xl font-semibold">96</div>
+                                <div class="text-xs text-slate-400 mt-1">
+                                    总记录数
+                                </div>
+                            </div>
+                            <div
+                                class="rounded-[18px] border border-slate-200/70 bg-white p-4"
+                            >
+                                <div class="text-2xl font-semibold">62</div>
+                                <div class="text-xs text-slate-400 mt-1">
+                                    日报数
+                                </div>
+                            </div>
+                            <div
+                                class="rounded-[18px] border border-slate-200/70 bg-white p-4"
+                            >
+                                <div class="text-2xl font-semibold">24</div>
+                                <div class="text-xs text-slate-400 mt-1">
+                                    周报数
+                                </div>
+                            </div>
+                            <div
+                                class="rounded-[18px] border border-slate-200/70 bg-white p-4"
+                            >
+                                <div class="text-2xl font-semibold">10</div>
+                                <div class="text-xs text-slate-400 mt-1">
+                                    月报数
+                                </div>
+                            </div>
+                            <div
+                                class="rounded-[18px] border border-slate-200/70 bg-white p-4"
+                            >
+                                <div class="text-2xl font-semibold">1.2M</div>
+                                <div class="text-xs text-slate-400 mt-1">
+                                    输入 Tokens
+                                </div>
+                            </div>
+                            <div
+                                class="rounded-[18px] border border-slate-200/70 bg-white p-4"
+                            >
+                                <div class="text-2xl font-semibold">842k</div>
+                                <div class="text-xs text-slate-400 mt-1">
+                                    输出 Tokens
+                                </div>
+                            </div>
+                            <div
+                                class="rounded-[18px] border border-slate-200/70 bg-white p-4"
+                            >
+                                <div class="text-2xl font-semibold">318k</div>
+                                <div class="text-xs text-slate-400 mt-1">
+                                    缓存 Tokens
+                                </div>
+                            </div>
+                            <div
+                                class="rounded-[18px] border border-slate-200/70 bg-white p-4"
+                            >
+                                <div class="text-2xl font-semibold">87</div>
+                                <div class="text-xs text-slate-400 mt-1">
+                                    应用启动次数
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            class="bg-white border border-slate-200/70 rounded-[20px] px-5 pt-5 pb-4"
+                        >
+                            <h2 class="text-[22px] font-semibold tracking-tight text-slate-800">
+                                用量趋势
+                            </h2>
+
+                            <div class="relative mt-4 h-[286px] overflow-visible">
+                                <div
+                                    id="usageScroller"
+                                    class="no-scrollbar absolute inset-0 overflow-x-auto overflow-y-hidden"
+                                >
+                                    <div
+                                        id="usageTrack"
+                                        class="relative h-full min-w-full"
+                                    >
+                                        <div
+                                            id="usageChart"
+                                            class="absolute left-0 right-0 top-0 bottom-9 z-10 flex items-end"
+                                        ></div>
+                                        <div
+                                            id="usageBaseline"
+                                            class="absolute left-0 right-0 bottom-[39px] z-0 flex items-center"
+                                        ></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div
+                                id="usageLegend"
+                                class="no-scrollbar flex items-center gap-x-4 gap-y-2 overflow-x-auto whitespace-nowrap text-[12px] text-slate-500"
+                            ></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section
+                    id="about"
+                    class="settings-page px-8 py-8 max-w-[1120px] mx-auto w-full"
+                >
+                    <h2 class="text-[18px] font-medium text-slate-600 mb-6">
+                        关于
+                    </h2>
+                    <div
+                        class="bg-white border border-slate-200/70 rounded-[22px] px-6 py-6 mb-5 flex items-center gap-6"
+                    >
+                        <div class="relative w-14 h-14">
+                            <span
+                                class="absolute left-1 top-3 w-9 h-9 rounded-full border-[5px] border-blue-500/75"
+                            ></span>
+                            <span
+                                class="absolute left-4 top-1 w-9 h-9 rounded-full border-[5px] border-amber-700/75"
+                            ></span>
+                            <span
+                                class="absolute left-4 top-4 w-9 h-9 rounded-full border-[5px] border-slate-600/75"
+                            ></span>
+                        </div>
+                        <div>
+                            <div class="about-brand font-semibold text-slate-900">
+                                Kelivo
+                            </div>
+                            <div class="mt-1 text-[15px] text-slate-500">
+                                开源 AI 助手
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        class="bg-white border border-slate-200/70 rounded-[22px] px-6 py-5"
+                    >
+                        <h3 class="text-[22px] font-semibold text-slate-900 mb-4">
+                            关于
+                        </h3>
+                        <div class="divide-y divide-slate-100">
+                            <div class="h-14 flex items-center justify-between">
+                                <div class="flex items-center gap-4 text-[17px] text-slate-700">
+                                    <i data-lucide="code-2" class="w-5 h-5"></i>
+                                    版本
+                                </div>
+                                <span class="text-[15px] text-slate-400"
+                                    >1.1.16 / 60</span
+                                >
+                            </div>
+                            <div class="h-14 flex items-center justify-between">
+                                <div class="flex items-center gap-4 text-[17px] text-slate-700">
+                                    <i data-lucide="phone" class="w-5 h-5"></i>
+                                    系统
+                                </div>
+                                <span class="text-[15px] text-slate-400"
+                                    >Windows</span
+                                >
+                            </div>
+                            <button class="w-full h-14 flex items-center justify-between">
+                                <div class="flex items-center gap-4 text-[17px] text-slate-700">
+                                    <i data-lucide="globe-2" class="w-5 h-5"></i>
+                                    官网
+                                </div>
+                                <i
+                                    data-lucide="chevron-right"
+                                    class="w-5 h-5 text-slate-400"
+                                ></i>
+                            </button>
+                            <button class="w-full h-14 flex items-center justify-between">
+                                <div class="flex items-center gap-4 text-[17px] text-slate-700">
+                                    <i data-lucide="github" class="w-5 h-5"></i>
+                                    GitHub
+                                </div>
+                                <i
+                                    data-lucide="chevron-right"
+                                    class="w-5 h-5 text-slate-400"
+                                ></i>
+                            </button>
+                            <button class="w-full h-14 flex items-center justify-between">
+                                <div class="flex items-center gap-4 text-[17px] text-slate-700">
+                                    <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+                                    许可证
+                                </div>
+                                <i
+                                    data-lucide="chevron-right"
+                                    class="w-5 h-5 text-slate-400"
+                                ></i>
+                            </button>
+                            <button class="w-full h-14 flex items-center justify-between">
+                                <div class="flex items-center gap-4 text-[17px] text-slate-700">
+                                    <i data-lucide="message-circle" class="w-5 h-5"></i>
+                                    加入QQ群
+                                </div>
+                                <i
+                                    data-lucide="chevron-right"
+                                    class="w-5 h-5 text-slate-400"
+                                ></i>
+                            </button>
+                            <button class="w-full h-14 flex items-center justify-between">
+                                <div class="flex items-center gap-4 text-[17px] text-slate-700">
+                                    <i data-lucide="gamepad-2" class="w-5 h-5"></i>
+                                    在 Discord 中加入我们
+                                </div>
+                                <i
+                                    data-lucide="chevron-right"
+                                    class="w-5 h-5 text-slate-400"
+                                ></i>
+                            </button>
+                            <button class="w-full h-14 flex items-center justify-between">
+                                <div class="flex items-center gap-4 text-[17px] text-slate-700">
+                                    <i data-lucide="heart" class="w-5 h-5"></i>
+                                    赞助
+                                </div>
+                                <i
+                                    data-lucide="chevron-right"
+                                    class="w-5 h-5 text-slate-400"
+                                ></i>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <div id="floatingTooltip" class="fixed hidden pointer-events-none"></div>
+
+        <div
+            id="fontModal"
+            class="modal fixed inset-0 z-50 items-center justify-center bg-slate-900/10"
+        >
+            <div
+                class="w-[520px] h-[620px] bg-white border border-slate-200 rounded-[24px] shadow-modal flex flex-col overflow-hidden"
+            >
+                <div
+                    class="h-14 px-5 border-b border-slate-100 flex items-center justify-between"
+                >
+                    <h2 class="text-[15px] font-semibold text-slate-900">
+                        应用字体
+                    </h2>
+                    <button
+                        data-close-modal="fontModal"
+                        class="w-8 h-8 rounded-lg hover:bg-slate-50 flex items-center justify-center text-slate-400"
+                    >
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <div class="p-4 border-b border-slate-100">
+                    <div
+                        class="h-10 rounded-xl border border-slate-200 flex items-center px-3"
+                    >
+                        <i
+                            data-lucide="search"
+                            class="w-4 h-4 text-slate-400 mr-2"
+                        ></i>
+                        <input
+                            placeholder="输入以过滤字体..."
+                            class="w-full bg-transparent outline-none text-[13px]"
+                        />
+                    </div>
+                </div>
+                <div class="flex-1 overflow-y-auto no-scrollbar p-3 space-y-1">
+                    <button
+                        class="w-full px-3 py-2.5 rounded-xl bg-slate-100 text-left flex items-center justify-between"
+                    >
+                        <span class="text-[13px] font-medium">系统默认</span>
+                        <i data-lucide="check" class="w-4 h-4"></i>
+                    </button>
+                    <button
+                        class="w-full px-3 py-2.5 rounded-xl hover:bg-slate-50 text-left flex items-center justify-between"
+                    >
+                        <span class="text-[13px]">Inter</span>
+                        <span class="text-lg" style="font-family: Inter"
+                            >Aa字</span
+                        >
+                    </button>
+                    <button
+                        class="w-full px-3 py-2.5 rounded-xl hover:bg-slate-50 text-left flex items-center justify-between"
+                    >
+                        <span class="text-[13px]">Segoe UI Variable</span>
+                        <span class="text-lg" style="font-family: Segoe UI"
+                            >Aa字</span
+                        >
+                    </button>
+                    <button
+                        class="w-full px-3 py-2.5 rounded-xl hover:bg-slate-50 text-left flex items-center justify-between"
+                    >
+                        <span class="text-[13px]">PingFang SC</span>
+                        <span class="text-lg" style="font-family: PingFang SC"
+                            >Aa字</span
+                        >
+                    </button>
+                    <button
+                        class="w-full px-3 py-2.5 rounded-xl hover:bg-slate-50 text-left flex items-center justify-between"
+                    >
+                        <span class="text-[13px]">Noto Sans</span>
+                        <span class="text-lg" style="font-family: Noto Sans"
+                            >Aa字</span
+                        >
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div
+            id="providerModal"
+            class="modal fixed inset-0 z-50 items-center justify-center bg-slate-900/10 p-6"
+        >
+            <div
+                class="w-[760px] max-w-[calc(100vw-48px)] bg-white border border-slate-200 rounded-[22px] shadow-modal overflow-hidden"
+            >
+                <div class="px-5 pt-4 pb-3 flex items-center justify-between">
+                    <h2 class="text-[18px] font-semibold text-slate-900 tracking-tight">
+                        添加供应商
+                    </h2>
+                    <button
+                        data-close-modal="providerModal"
+                        class="w-8 h-8 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-700"
+                        aria-label="关闭添加供应商弹窗"
+                    >
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+                <div class="px-5 pb-5">
+                    <div class="grid grid-cols-3 gap-4 mb-4">
+                        <button
+                            class="h-10 rounded-[12px] bg-[#d9d9db] text-[15px] font-medium text-slate-950"
+                        >
+                            OpenAI
+                        </button>
+                        <button
+                            class="h-10 rounded-[12px] text-[15px] font-medium text-slate-600 hover:bg-slate-50"
+                        >
+                            Google
+                        </button>
+                        <button
+                            class="h-10 rounded-[12px] text-[15px] font-medium text-slate-600 hover:bg-slate-50"
+                        >
+                            Claude
+                        </button>
+                    </div>
+
+                    <div
+                        class="h-[58px] rounded-[14px] bg-[#f7f7f9] px-4 flex items-center justify-between mb-4"
+                    >
+                        <span class="text-[14px] font-normal text-slate-900">
+                            是否启用
+                        </span>
+                        <button
+                            class="switch w-11 h-6 rounded-full bg-black relative transition-colors"
+                            aria-label="是否启用供应商"
+                        >
+                            <span
+                                class="absolute right-0.5 top-0.5 w-5 h-5 rounded-full bg-white"
+                            ></span>
+                        </button>
+                    </div>
+
+                    <div class="space-y-3.5">
+                        <label class="block">
+                            <span class="mb-1.5 block text-[13px] font-normal text-slate-600">
+                                名称
+                            </span>
+                            <input
+                                value="OpenAI"
+                                class="w-full h-11 rounded-[12px] border border-slate-300 bg-[#f8f8fa] px-4 text-[15px] text-slate-900 outline-none focus:border-slate-400"
+                            />
+                        </label>
+                        <label class="block">
+                            <span class="mb-1.5 block text-[13px] font-normal text-slate-600">
+                                API Key
+                            </span>
+                            <input
+                                type="password"
+                                class="w-full h-11 rounded-[12px] border border-slate-300 bg-[#f8f8fa] px-4 text-[15px] text-slate-900 outline-none focus:border-slate-400"
+                            />
+                        </label>
+                        <label class="block">
+                            <span class="mb-1.5 block text-[13px] font-normal text-slate-600">
+                                Base URL
+                            </span>
+                            <input
+                                value="https://api.openai.com/v1"
+                                class="w-full h-11 rounded-[12px] border border-slate-300 bg-[#f8f8fa] px-4 text-[15px] text-slate-900 outline-none focus:border-slate-400"
+                            />
+                        </label>
+                        <label class="block">
+                            <span class="mb-1.5 block text-[13px] font-normal text-slate-600">
+                                API 路径
+                            </span>
+                            <input
+                                value="/chat/completions"
+                                class="w-full h-11 rounded-[12px] border border-slate-300 bg-[#f8f8fa] px-4 text-[15px] text-slate-900 outline-none focus:border-slate-400"
+                            />
+                        </label>
+                    </div>
+
+                    <div class="mt-8 flex justify-end">
+                        <button
+                            data-close-modal="providerModal"
+                            class="h-11 px-4 rounded-[12px] bg-black text-white text-[15px] font-semibold flex items-center gap-2.5 hover:bg-slate-900"
+                        >
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            添加
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div
+            id="modelModal"
+            class="modal fixed inset-0 z-50 items-center justify-center bg-slate-900/10 p-6"
+        >
+            <div
+                class="w-[760px] max-w-[calc(100vw-48px)] max-h-[calc(100vh-48px)] bg-white border border-slate-200 rounded-[22px] shadow-modal overflow-hidden flex flex-col"
+            >
+                <div class="px-5 pt-4 pb-3 flex items-center justify-between shrink-0">
+                    <h2 class="text-[18px] font-semibold text-slate-900 tracking-tight">
+                        编辑模型
+                    </h2>
+                    <button
+                        data-close-modal="modelModal"
+                        class="w-8 h-8 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-700"
+                        aria-label="关闭编辑模型弹窗"
+                    >
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <div class="px-5 pb-5 overflow-y-auto no-scrollbar">
+                    <div
+                        class="rounded-[16px] border border-slate-300/80 bg-[#f8f8fa] p-4 mb-4"
+                    >
+                        <label class="block mb-3.5">
+                            <span class="mb-1.5 block text-[13px] font-normal text-slate-600">
+                                模型 ID
+                            </span>
+                            <div
+                                class="h-11 rounded-[12px] border border-slate-200 bg-white px-4 flex items-center gap-3"
+                            >
+                                <input
+                                    value="qwen/qwen3-1.7b"
+                                    readonly
+                                    class="flex-1 bg-transparent text-[15px] text-slate-400 outline-none cursor-default"
+                                    aria-label="模型 ID，不可修改"
+                                />
+                                <button
+                                    class="w-8 h-8 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center"
+                                    aria-label="复制模型 ID"
+                                >
+                                    <i data-lucide="copy" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </label>
+
+                        <label class="block">
+                            <span class="mb-1.5 block text-[13px] font-normal text-slate-600">
+                                模型名称
+                            </span>
+                            <input
+                                value="qwen/qwen3-1.7b"
+                                class="w-full h-11 rounded-[12px] border border-slate-300 bg-white px-4 text-[15px] text-slate-900 outline-none focus:border-slate-400"
+                            />
+                        </label>
+                    </div>
+
+                    <div
+                        class="rounded-[16px] border border-slate-300/80 bg-[#f8f8fa] p-4"
+                    >
+                        <div class="mb-4">
+                            <div class="mb-2 text-[13px] font-normal text-slate-600">
+                                模型类型
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button
+                                    class="model-option h-11 rounded-[12px] border border-slate-400 bg-[#d9d9db] text-[15px] font-semibold text-slate-950"
+                                    data-selected="true"
+                                >
+                                    聊天
+                                </button>
+                                <button
+                                    class="model-option h-11 rounded-[12px] border border-slate-300 bg-white text-[15px] font-semibold text-slate-600"
+                                    data-selected="false"
+                                >
+                                    补全
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="mb-2 text-[13px] font-normal text-slate-600">
+                                输入模式
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button
+                                    class="model-option h-11 rounded-[12px] border border-slate-400 bg-[#d9d9db] text-[15px] font-semibold text-slate-950"
+                                    data-selected="true"
+                                >
+                                    文本
+                                </button>
+                                <button
+                                    class="model-option h-11 rounded-[12px] border border-slate-300 bg-white text-[15px] font-semibold text-slate-600"
+                                    data-selected="false"
+                                >
+                                    图片
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="mb-2 text-[13px] font-normal text-slate-600">
+                                能力
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button
+                                    class="model-option h-11 rounded-[12px] border border-slate-400 bg-[#d9d9db] text-[15px] font-semibold text-slate-950"
+                                    data-selected="true"
+                                >
+                                    工具
+                                </button>
+                                <button
+                                    class="model-option h-11 rounded-[12px] border border-slate-300 bg-white text-[15px] font-semibold text-slate-600"
+                                    data-selected="false"
+                                >
+                                    推理
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 flex justify-end">
+                        <button
+                            data-close-modal="modelModal"
+                            class="h-11 px-4 rounded-[12px] bg-black text-white text-[15px] font-semibold flex items-center gap-2.5 hover:bg-slate-900"
+                        >
+                            <i data-lucide="check" class="w-4 h-4"></i>
+                            确认
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div
+            id="dateModal"
+            class="modal fixed inset-0 z-50 items-center justify-center bg-slate-900/10"
+        >
+            <div
+                class="w-[440px] bg-white border border-slate-200 rounded-[24px] shadow-modal overflow-hidden"
+            >
+                <div
+                    class="h-14 px-5 border-b border-slate-100 flex items-center justify-between"
+                >
+                    <h2 class="text-[15px] font-semibold text-slate-900">
+                        自定义时间段
+                    </h2>
+                    <button
+                        data-close-modal="dateModal"
+                        class="w-8 h-8 rounded-lg hover:bg-slate-50 flex items-center justify-center text-slate-400"
+                    >
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <div class="p-5">
+                    <div class="grid grid-cols-2 gap-3 mb-4">
+                        <input
+                            value="2026-06-01"
+                            class="h-9 rounded-xl border border-slate-200 px-3 text-[13px]"
+                        />
+                        <input
+                            value="2026-06-17"
+                            class="h-9 rounded-xl border border-slate-200 px-3 text-[13px]"
+                        />
+                    </div>
+                    <div class="rounded-[18px] border border-slate-200 p-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <button class="text-slate-400">
+                                <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                            </button>
+                            <span class="text-[13px] font-medium"
+                                >2026 年 6 月</span
+                            >
+                            <button class="text-slate-400">
+                                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                        <div
+                            class="grid grid-cols-7 gap-1 text-center text-xs text-slate-400 mb-2"
+                        >
+                            <span>一</span><span>二</span><span>三</span
+                            ><span>四</span><span>五</span><span>六</span
+                            ><span>日</span>
+                        </div>
+                        <div
+                            id="calendarDays"
+                            class="grid grid-cols-7 gap-1 text-center"
+                        ></div>
+                    </div>
+                </div>
+                <div
+                    class="px-5 py-4 border-t border-slate-100 flex justify-end"
+                >
+                    <button
+                        data-close-modal="dateModal"
+                        class="h-9 px-4 rounded-xl bg-slate-900 text-white text-[13px] font-medium"
+                    >
+                        应用
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            lucide.createIcons();
+
+            const navButtons = document.querySelectorAll(".settings-nav");
+            const pageSections = document.querySelectorAll(".settings-page");
+
+            function setPage(page) {
+                navButtons.forEach((button) => {
+                    const isActive = button.dataset.page === page;
+                    button.className = isActive
+                        ? "settings-nav flex items-center gap-2.5 h-9 px-3 rounded-xl text-[13px] font-medium text-slate-900 bg-slate-100/80 transition-colors"
+                        : "settings-nav flex items-center gap-2.5 h-9 px-3 rounded-xl text-[13px] font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-100/60 transition-colors";
+                });
+                pageSections.forEach((section) => {
+                    section.classList.toggle("active", section.id === page);
+                });
+            }
+
+            navButtons.forEach((button) => {
+                button.addEventListener("click", () => setPage(button.dataset.page));
+            });
+
+            function openModal(id) {
+                document.getElementById(id).classList.add("active");
+            }
+
+            function closeModal(id) {
+                document.getElementById(id).classList.remove("active");
+            }
+
+            document
+                .getElementById("openFontModal")
+                .addEventListener("click", () => openModal("fontModal"));
+            document
+                .getElementById("openProviderModal")
+                .addEventListener("click", () => openModal("providerModal"));
+            document
+                .getElementById("openModelModal")
+                .addEventListener("click", () => openModal("modelModal"));
+            document
+                .getElementById("openDateModal")
+                .addEventListener("click", () => openModal("dateModal"));
+
+            document.querySelectorAll("[data-close-modal]").forEach((button) => {
+                button.addEventListener("click", () =>
+                    closeModal(button.dataset.closeModal),
+                );
+            });
+
+            document.querySelectorAll(".model-option").forEach((button) => {
+                button.addEventListener("click", () => {
+                    const selected = button.dataset.selected === "true";
+                    button.dataset.selected = String(!selected);
+                    button.className = !selected
+                        ? "model-option h-11 rounded-[12px] border border-slate-400 bg-[#d9d9db] text-[15px] font-semibold text-slate-950"
+                        : "model-option h-11 rounded-[12px] border border-slate-300 bg-white text-[15px] font-semibold text-slate-600";
+                });
+            });
+
+            document.querySelectorAll(".switch").forEach((button) => {
+                button.addEventListener("click", () => {
+                    const knob = button.querySelector("span");
+                    const active = button.classList.contains("bg-slate-900");
+                    const isLarge = button.classList.contains("h-8");
+                    const isMedium = button.classList.contains("h-7");
+                    const knobSize = isLarge
+                        ? "w-7 h-7"
+                        : isMedium
+                          ? "w-6 h-6"
+                          : "w-5 h-5";
+                    button.classList.toggle("bg-slate-900", !active);
+                    button.classList.toggle("bg-slate-200", active);
+                    knob.className = active
+                        ? `absolute left-0.5 top-0.5 ${knobSize} rounded-full bg-white`
+                        : `absolute right-0.5 top-0.5 ${knobSize} rounded-full bg-white`;
+                });
+            });
+
+            const floatingTooltip = document.getElementById("floatingTooltip");
+
+            function hideFloatingTooltip() {
+                floatingTooltip.className = "fixed hidden pointer-events-none";
+                floatingTooltip.innerHTML = "";
+                floatingTooltip.style.display = "none";
+                floatingTooltip.style.visibility = "hidden";
+            }
+
+            function showFloatingTooltip(anchor, html, className) {
+                floatingTooltip.className = className;
+                floatingTooltip.innerHTML = html;
+                floatingTooltip.style.left = "0px";
+                floatingTooltip.style.top = "0px";
+                floatingTooltip.style.visibility = "hidden";
+                floatingTooltip.style.display = "block";
+
+                const margin = 10;
+                const anchorRect = anchor.getBoundingClientRect();
+                const tooltipRect = floatingTooltip.getBoundingClientRect();
+                let left =
+                    anchorRect.left + anchorRect.width / 2 - tooltipRect.width / 2;
+                let top = anchorRect.top - tooltipRect.height - margin;
+
+                if (top < margin) {
+                    top = anchorRect.bottom + margin;
+                }
+                if (top + tooltipRect.height > window.innerHeight - margin) {
+                    top = Math.max(
+                        margin,
+                        anchorRect.top - tooltipRect.height - margin,
+                    );
+                }
+
+                left = Math.min(
+                    Math.max(margin, left),
+                    window.innerWidth - tooltipRect.width - margin,
+                );
+
+                floatingTooltip.style.left = `${left}px`;
+                floatingTooltip.style.top = `${top}px`;
+                floatingTooltip.style.visibility = "visible";
+            }
+
+            function bindFloatingTooltip(anchor, html, className) {
+                anchor.addEventListener("mouseenter", () =>
+                    showFloatingTooltip(anchor, html, className),
+                );
+                anchor.addEventListener("mousemove", () =>
+                    showFloatingTooltip(anchor, html, className),
+                );
+                anchor.addEventListener("mouseleave", hideFloatingTooltip);
+            }
+
+            window.addEventListener("scroll", hideFloatingTooltip, true);
+            window.addEventListener("resize", hideFloatingTooltip);
+
+            const heatmap = document.getElementById("heatmap");
+            const heatmapMonths = document.getElementById("heatmapMonths");
+            const heatColors = [
+                "bg-[#F1F5F9]",
+                "bg-[#DCFCE7]",
+                "bg-[#BBF7D0]",
+                "bg-[#86EFAC]",
+                "bg-[#4ADE80]",
+            ];
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const heatmapStart = new Date(
+                today.getFullYear() - 1,
+                today.getMonth(),
+                today.getDate(),
+            );
+            const totalHeatmapDays =
+                Math.round((today - heatmapStart) / 86400000) + 1;
+            const heatmapStartOffset = heatmapStart.getDay();
+            const totalHeatmapWeeks = Math.ceil(
+                (heatmapStartOffset + totalHeatmapDays) / 7,
+            );
+            heatmapMonths.style.gridTemplateColumns = `repeat(${totalHeatmapWeeks}, 12px)`;
+
+            function formatLocalDate(date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, "0");
+                const day = String(date.getDate()).padStart(2, "0");
+                return `${year}-${month}-${day}`;
+            }
+
+            const monthLabels = Array.from(
+                { length: totalHeatmapWeeks },
+                () => "",
+            );
+            let lastMonth = null;
+            for (let i = 0; i < totalHeatmapDays; i += 1) {
+                const date = new Date(heatmapStart);
+                date.setDate(heatmapStart.getDate() + i);
+                const month = date.getMonth();
+                const weekIndex = Math.floor((heatmapStartOffset + i) / 7);
+                if (month !== lastMonth) {
+                    monthLabels[weekIndex] = `${month + 1}月`;
+                    lastMonth = month;
+                }
+            }
+
+            monthLabels.forEach((monthLabel) => {
+                const label = document.createElement("div");
+                label.className =
+                    "h-5 leading-5 text-left text-slate-400 whitespace-nowrap";
+                label.textContent = monthLabel;
+                heatmapMonths.appendChild(label);
+            });
+
+            for (let i = 0; i < heatmapStartOffset; i += 1) {
+                const placeholder = document.createElement("div");
+                placeholder.className = "w-3 h-3 pointer-events-none opacity-0";
+                heatmap.appendChild(placeholder);
+            }
+
+            for (let i = 0; i < totalHeatmapDays; i += 1) {
+                const wrapper = document.createElement("div");
+                wrapper.className = "relative group hover:z-30";
+
+                const block = document.createElement("div");
+                const colorClass = heatColors[(i * 7) % heatColors.length];
+                block.className = `w-3 h-3 rounded-[3px] transition-all duration-150 hover:scale-110 cursor-pointer ${colorClass}`;
+
+                const date = new Date(heatmapStart);
+                date.setDate(heatmapStart.getDate() + i);
+                const dateString = formatLocalDate(date);
+                const count = (i * 3) % 9;
+
+                const tooltipHtml =
+                    count === 0
+                        ? `<span class="text-slate-400">No commits on</span> <span class="font-semibold text-slate-600">${dateString}</span>`
+                        : `<span class="font-bold text-slate-900">${count} commits</span> <span class="text-slate-400">on</span> <span class="font-semibold text-slate-600">${dateString}</span>`;
+                bindFloatingTooltip(
+                    block,
+                    tooltipHtml,
+                    "fixed z-[9999] pointer-events-none select-none whitespace-nowrap rounded-lg border border-slate-100 bg-white px-2.5 py-1.5 text-[11px] font-medium text-slate-800 shadow-xl",
+                );
+
+                wrapper.appendChild(block);
+                heatmap.appendChild(wrapper);
+            }
+
+            function getUsageDayMetrics(totalDays) {
+                if (totalDays >= 800) return { width: 4, gap: 4 };
+                if (totalDays >= 365) return { width: 5, gap: 5 };
+                if (totalDays >= 180) return { width: 7, gap: 6 };
+                if (totalDays >= 90) return { width: 10, gap: 7 };
+                return { width: 14, gap: 8 };
+            }
+
+            const usageScroller = document.getElementById("usageScroller");
+            const usageTrack = document.getElementById("usageTrack");
+            const usageChart = document.getElementById("usageChart");
+            const usageBaseline = document.getElementById("usageBaseline");
+            const usageLegend = document.getElementById("usageLegend");
+            const usageProviders = [
+                { name: "Mimo", color: "#2563EB" },
+                { name: "Ruoli", color: "#0F9488" },
+                { name: "aionew", color: "#F36B16" },
+                { name: "IKUN", color: "#8B5CF6" },
+                { name: "SiliconFlow", color: "#E11D48" },
+                { name: "Zhipu AI", color: "#22A65A" },
+                { name: "RuoliGemini", color: "#C98206" },
+                { name: "OpenAI", color: "#1596AD" },
+            ];
+
+            function getStableHash(value) {
+                return Array.from(value).reduce(
+                    (hash, char) => (hash * 31 + char.charCodeAt(0)) >>> 0,
+                    0,
+                );
+            }
+
+            function getProviderColor(providerName, index) {
+                const existing = usageProviders.find(
+                    (provider) => provider.name === providerName,
+                );
+                if (existing?.color) return existing.color;
+
+                const hash = getStableHash(providerName);
+                const hueBands = [
+                    [205, 252],
+                    [176, 200],
+                    [142, 168],
+                    [262, 306],
+                    [318, 352],
+                    [6, 22],
+                    [98, 130],
+                ];
+                const band = hueBands[hash % hueBands.length];
+                const spread =
+                    ((hash * 0.61803398875 + index * 0.38196601125) % 1 + 1) %
+                    1;
+                const hue = band[0] + (band[1] - band[0]) * spread;
+                const lightnessSteps = [0.68, 0.72, 0.76, 0.7, 0.74, 0.78];
+                const chromaSteps = [0.11, 0.125, 0.14, 0.105, 0.13];
+                const lightness =
+                    lightnessSteps[hash % lightnessSteps.length];
+                const chroma =
+                    chromaSteps[
+                        Math.floor(hash / lightnessSteps.length + index) %
+                            chromaSteps.length
+                    ];
+                return `oklch(${lightness} ${chroma} ${hue.toFixed(1)} / 0.92)`;
+            }
+
+            function formatTokenCount(value) {
+                return `${Math.round(value).toLocaleString("en-US")} tokens`;
+            }
+
+            function dateKey(date) {
+                return `${date.getMonth() + 1}/${date.getDate()}`;
+            }
+
+            const usageTotalDays = 30;
+            const usageMetrics = getUsageDayMetrics(usageTotalDays);
+            const usageTrackWidth =
+                usageTotalDays * usageMetrics.width +
+                (usageTotalDays - 1) * usageMetrics.gap;
+            usageTrack.style.width = `${usageTrackWidth}px`;
+            usageChart.style.gap = `${usageMetrics.gap}px`;
+            usageBaseline.style.gap = `${usageMetrics.gap}px`;
+
+            const usageRecentOverrides = {
+                1: { aionew: 44120 },
+                4: { Ruoli: 17760, SiliconFlow: 17640, OpenAI: 17520 },
+                6: { aionew: 38640 },
+                8: { Ruoli: 28720, SiliconFlow: 22680 },
+                11: { aionew: 42180 },
+                13: { RuoliGemini: 34820 },
+                15: { Ruoli: 272475, aionew: 35047 },
+                18: { Ruoli: 22740, Mimo: 118640 },
+                20: { Mimo: 245280, aionew: 28480 },
+                22: { Mimo: 389420 },
+                24: { Mimo: 186720, IKUN: 61240 },
+                25: { SiliconFlow: 23860 },
+                27: { Mimo: 165300, IKUN: 72300 },
+                28: { IKUN: 46280 },
+                29: { Mimo: 51240, "Zhipu AI": 19880, SiliconFlow: 26840 },
+            };
+
+            const usageDays = Array.from({ length: usageTotalDays }, (_, index) => {
+                const date = new Date(today);
+                date.setDate(today.getDate() - (usageTotalDays - 1 - index));
+                const recentIndex = index - (usageTotalDays - 30);
+                const values = usageProviders
+                    .map((provider, providerIndex) => {
+                        const amount =
+                            usageRecentOverrides[recentIndex]?.[
+                                provider.name
+                            ] ?? 0;
+                        return {
+                            ...provider,
+                            color: getProviderColor(provider.name, providerIndex),
+                            amount,
+                        };
+                    })
+                    .filter((provider) => provider.amount > 0);
+                return {
+                    date,
+                    values,
+                    total: values.reduce(
+                        (sum, provider) => sum + provider.amount,
+                        0,
+                    ),
+                };
+            });
+            const usageMax = Math.max(...usageDays.map((day) => day.total));
+
+            usageProviders.forEach((provider, index) => {
+                const item = document.createElement("span");
+                item.className = "flex items-center gap-1.5 whitespace-nowrap";
+                item.innerHTML = `
+                    <span class="w-3.5 h-3.5 rounded-[4px]" style="background:${getProviderColor(provider.name, index)}"></span>
+                    ${provider.name}
+                `;
+                usageLegend.appendChild(item);
+            });
+
+            usageDays.forEach(() => {
+                const dash = document.createElement("span");
+                dash.className =
+                    "h-1 shrink-0 rounded-full bg-slate-200/80";
+                dash.style.width = `${usageMetrics.width}px`;
+                usageBaseline.appendChild(dash);
+            });
+
+            usageDays.forEach((day, dayIndex) => {
+                const bar = document.createElement("div");
+                bar.className =
+                    "group relative flex h-full shrink-0 items-end justify-center";
+                bar.style.width = `${usageMetrics.width}px`;
+                const height = day.total
+                    ? Math.max(10, (day.total / usageMax) * 92)
+                    : 0;
+                const columnWidth = Math.max(usageMetrics.width, 4);
+                const dateLabel = formatLocalDate(day.date);
+                const segments = day.values
+                    .map(
+                        (provider) => `
+                            <div
+                                class="w-full"
+                                style="height:${(provider.amount / day.total) * 100}%; background:${provider.color}"
+                            ></div>
+                        `,
+                    )
+                    .join("");
+                const tooltipRows = day.values
+                    .map(
+                        (provider) => `
+                            <div class="flex items-center justify-between gap-4">
+                                <span class="flex items-center gap-1.5 font-medium text-slate-700">
+                                    <span class="w-2 h-2 rounded-full" style="background:${provider.color}"></span>
+                                    ${provider.name}
+                                </span>
+                                <span class="text-slate-600">${formatTokenCount(provider.amount)}</span>
+                            </div>
+                        `,
+                    )
+                    .join("");
+                bar.innerHTML = day.total
+                    ? `
+                        <div
+                            class="absolute bottom-0 hidden rounded-[5px] border-2 border-slate-400 bg-transparent group-hover:block pointer-events-none"
+                            style="height:calc(${height}% + 8px); width:${columnWidth + 8}px; transform:translateY(4px)"
+                        ></div>
+                        <div
+                            class="overflow-hidden rounded-[4px] bg-slate-100"
+                            style="height:${height}%; width:${columnWidth}px"
+                        >
+                            ${segments}
+                        </div>
+                    `
+                    : "";
+                if (day.total) {
+                    bindFloatingTooltip(
+                        bar,
+                        `
+                            <div class="mb-2 text-[13px] font-semibold tracking-tight text-slate-800">
+                                ${dateLabel}
+                            </div>
+                            <div class="space-y-1.5">
+                                ${tooltipRows}
+                            </div>
+                        `,
+                        "fixed z-[9999] pointer-events-none w-[208px] rounded-[12px] bg-slate-50/95 px-3 py-2.5 text-[11px] shadow-[0_12px_28px_rgba(15,23,42,0.11)] backdrop-blur-sm",
+                    );
+                }
+                usageChart.appendChild(bar);
+            });
+
+            usageScroller.addEventListener(
+                "wheel",
+                (event) => {
+                    const hasHorizontalOverflow =
+                        usageScroller.scrollWidth > usageScroller.clientWidth + 1;
+                    if (!hasHorizontalOverflow) return;
+
+                    const delta =
+                        Math.abs(event.deltaX) > Math.abs(event.deltaY)
+                            ? event.deltaX
+                            : event.deltaY;
+                    if (!delta) return;
+                    event.preventDefault();
+                    usageScroller.scrollLeft += delta;
+                },
+                { passive: false },
+            );
+            requestAnimationFrame(() => {
+                if (usageScroller.scrollWidth > usageScroller.clientWidth + 1) {
+                    usageScroller.scrollLeft =
+                        usageScroller.scrollWidth - usageScroller.clientWidth;
+                }
+            });
+
+            const calendarDays = document.getElementById("calendarDays");
+            for (let i = 1; i <= 30; i += 1) {
+                const day = document.createElement("button");
+                const disabled = i < 3;
+                day.className = disabled
+                    ? "h-8 rounded-lg text-xs text-slate-300 cursor-not-allowed"
+                    : i === 17
+                      ? "h-8 rounded-lg text-xs bg-slate-900 text-white"
+                      : "h-8 rounded-lg text-xs text-slate-600 hover:bg-slate-100";
+                day.textContent = i;
+                day.disabled = disabled;
+                calendarDays.appendChild(day);
+            }
+        </script>
+    </body>
+</html>

@@ -1,0 +1,7 @@
+name: super_clipboard
+description: Local no-op stub used because spring_note only needs syntax_highlight's pure highlighter.
+version: 0.9.1
+publish_to: none
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"

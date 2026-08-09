@@ -1,0 +1,128 @@
+import 'structured_work_note.dart';
+
+class StructuredNoteSectionConfig {
+  const StructuredNoteSectionConfig({
+    required this.id,
+    required this.title,
+    required this.aiInstruction,
+  });
+
+  final String id;
+  final String title;
+  final String aiInstruction;
+
+  Map<String, Object?> toJson() {
+    return {'id': id, 'title': title, 'aiInstruction': aiInstruction};
+  }
+
+  StructuredNoteSectionConfig copyWith({String? title, String? aiInstruction}) {
+    return StructuredNoteSectionConfig(
+      id: id,
+      title: title ?? this.title,
+      aiInstruction: aiInstruction ?? this.aiInstruction,
+    );
+  }
+
+  static List<StructuredNoteSectionConfig> fromJson(
+    Object? value, {
+    String language = 'zh',
+  }) {
+    final fallbacks = defaultsFor(language);
+    if (value is! List) {
+      return fallbacks;
+    }
+    final byId = <String, Map>{};
+    for (final item in value.whereType<Map>()) {
+      final id = item['id'];
+      if (id is String) {
+        byId[id] = item;
+      }
+    }
+    return [
+      for (final fallback in fallbacks) _fromMap(byId[fallback.id], fallback),
+    ];
+  }
+
+  static List<StructuredNoteSectionConfig> normalize(
+    Iterable<StructuredNoteSectionConfig> sections,
+  ) {
+    final byId = {for (final section in sections) section.id: section};
+    return [
+      for (final fallback in defaults) _normalized(byId[fallback.id], fallback),
+    ];
+  }
+
+  static StructuredNoteSectionConfig _fromMap(
+    Map? value,
+    StructuredNoteSectionConfig fallback,
+  ) {
+    final title = _nonEmptyString(value?['title'], fallback.title);
+    return StructuredNoteSectionConfig(
+      id: fallback.id,
+      title: title,
+      aiInstruction: _nonEmptyString(value?['aiInstruction'], title),
+    );
+  }
+
+  static StructuredNoteSectionConfig _normalized(
+    StructuredNoteSectionConfig? value,
+    StructuredNoteSectionConfig fallback,
+  ) {
+    final title = _nonEmptyString(value?.title, fallback.title);
+    return StructuredNoteSectionConfig(
+      id: fallback.id,
+      title: title,
+      aiInstruction: _nonEmptyString(value?.aiInstruction, title),
+    );
+  }
+
+  static String _nonEmptyString(Object? value, String fallback) {
+    if (value is! String) {
+      return fallback;
+    }
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? fallback : trimmed;
+  }
+
+  static const defaults = [
+    StructuredNoteSectionConfig(
+      id: StructuredNoteSectionIds.a,
+      title: '完成事项',
+      aiInstruction: '提取已经完成或取得明确进展的工作。',
+    ),
+    StructuredNoteSectionConfig(
+      id: StructuredNoteSectionIds.b,
+      title: '问题记录',
+      aiInstruction: '提取遇到的问题、报错、阻塞事项或风险。',
+    ),
+    StructuredNoteSectionConfig(
+      id: StructuredNoteSectionIds.c,
+      title: '明日计划',
+      aiInstruction: '提取后续计划、下一步行动、待办或准备事项。',
+    ),
+  ];
+
+  static const _defaultsEn = [
+    StructuredNoteSectionConfig(
+      id: StructuredNoteSectionIds.a,
+      title: 'Done',
+      aiInstruction: 'Extract work that has been completed or saw clear progress.',
+    ),
+    StructuredNoteSectionConfig(
+      id: StructuredNoteSectionIds.b,
+      title: 'Issues',
+      aiInstruction: 'Extract problems, errors, blockers, or risks.',
+    ),
+    StructuredNoteSectionConfig(
+      id: StructuredNoteSectionIds.c,
+      title: 'Next plans',
+      aiInstruction:
+          'Extract follow-up plans, next actions, todos, or preparations.',
+    ),
+  ];
+
+  /// 按生效语言返回首页三栏的默认配置（[language] 为 'zh' 或 'en'）。
+  static List<StructuredNoteSectionConfig> defaultsFor(String language) {
+    return language == 'en' ? _defaultsEn : defaults;
+  }
+}

@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>AI 智能便签 - 回忆本</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <script src="https://unpkg.com/lucide@latest"></script>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        fontFamily: {
+                            sans: [
+                                "Inter",
+                                "SF Pro Display",
+                                "-apple-system",
+                                "BlinkMacSystemFont",
+                                "Segoe UI",
+                                "Roboto",
+                                "PingFang SC",
+                                "sans-serif",
+                            ],
+                        },
+                        boxShadow: {
+                            input: "0 8px 28px rgba(15, 23, 42, 0.04)",
+                            card: "0 4px 20px rgba(15, 23, 42, 0.02)",
+                        },
+                    },
+                },
+            };
+        </script>
+        <style>
+            body {
+                background-color: #fcfcfd;
+                color: #334155;
+                -webkit-font-smoothing: antialiased;
+            }
+            .no-scrollbar::-webkit-scrollbar {
+                display: none;
+            }
+            .no-scrollbar {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+            .state-transition {
+                transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+            }
+
+            /* 状态切换动画 */
+            #stateEntry {
+                transition: opacity 0.25s ease, transform 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+            }
+
+            #stateChat {
+                transition: opacity 0.35s ease 0.05s, transform 0.4s cubic-bezier(0.25, 1, 0.5, 1) 0.05s;
+            }
+
+            #fixedChatInput {
+                transition: opacity 0.3s ease 0.15s, transform 0.35s cubic-bezier(0.25, 1, 0.5, 1) 0.15s;
+            }
+
+            #aiLoading,
+            #aiResponse {
+                transition: opacity 0.2s ease;
+            }
+        </style>
+    </head>
+    <body
+        class="flex h-screen w-full overflow-hidden font-sans antialiased bg-[#fcfcfd]"
+    >
+        <aside
+            class="w-20 h-full flex flex-col justify-between py-7 px-4 select-none z-10 shrink-0 bg-[#fcfcfd]"
+        >
+            <nav class="flex flex-col items-center gap-3">
+                <a
+                    href="#"
+                    aria-label="首页"
+                    title="首页"
+                    class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-50 transition-colors"
+                >
+                    <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                </a>
+                <a
+                    href="#"
+                    aria-label="便签"
+                    title="便签"
+                    class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-50 transition-colors"
+                >
+                    <i data-lucide="sticky-note" class="w-4 h-4"></i>
+                </a>
+                <a
+                    href="#"
+                    aria-label="回忆本"
+                    title="回忆本"
+                    class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-900 bg-slate-100/80 transition-colors"
+                >
+                    <i
+                        data-lucide="book-open"
+                        class="w-4 h-4 text-slate-800"
+                    ></i>
+                </a>
+
+            </nav>
+
+            <a
+                href="#"
+                aria-label="设置"
+                title="设置"
+                class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-50 transition-colors"
+            >
+                <i data-lucide="settings" class="w-4 h-4"></i>
+            </a>
+        </aside>
+
+        <div class="flex-1 h-full flex flex-col bg-white">
+            <header
+                class="h-[56px] px-8 flex items-center justify-between shrink-0 select-none"
+            >
+                <button
+                    class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] font-medium text-[#64748B] hover:bg-[#F8FAFC] transition-colors"
+                >
+                    <span>记忆模型 v3.5</span>
+                    <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                </button>
+                <button
+                    id="btnNewChat"
+                    class="w-9 h-9 flex items-center justify-center rounded-xl text-[#64748B] hover:bg-[#F8FAFC] hover:text-slate-800 transition-colors"
+                    title="开启新对话"
+                >
+                    <i data-lucide="square-pen" class="w-4 h-4"></i>
+                </button>
+            </header>
+
+            <main
+                class="flex-1 overflow-y-auto no-scrollbar relative flex flex-col"
+            >
+                <div
+                    id="stateEntry"
+                    class="absolute inset-0 flex flex-col items-center justify-start px-6 pt-[22vh] select-none state-transition opacity-100 z-10"
+                >
+                    <div
+                        class="w-full max-w-[760px] flex flex-col items-center"
+                    >
+                        <h2
+                            class="text-2xl font-normal text-[#111827] leading-9 mb-5 text-center"
+                        >
+                            准备好了，随时开始
+                        </h2>
+
+                        <div
+                            class="w-full min-h-[52px] bg-white border border-[#E5E7EB] rounded-[28px] shadow-input grid grid-cols-[auto_1fr_auto] items-center py-[5px] pl-[7px] pr-2 mb-7 focus-within:border-slate-300 transition-colors"
+                        >
+                            <button
+                                class="w-9 h-9 flex items-center justify-center rounded-full text-[#111827] hover:bg-[#F8FAFC] transition-colors"
+                                title="添加素材"
+                            >
+                                <i
+                                    data-lucide="plus"
+                                    class="w-5 h-5"
+                                ></i>
+                            </button>
+                            <input
+                                id="inputEntry"
+                                type="text"
+                                placeholder="问问你的回忆..."
+                                class="min-h-10 bg-transparent border-none outline-none px-3 text-[15px] font-normal text-[#0F172A] placeholder-[#94A3B8]"
+                            />
+                            <button
+                                id="btnSendEntry"
+                                class="w-9 h-9 flex items-center justify-center bg-[#0F172A] hover:bg-slate-800 text-white rounded-full transition-colors shadow-sm"
+                                title="发送"
+                            >
+                                <i data-lucide="arrow-up" class="w-5 h-5"></i>
+                            </button>
+                        </div>
+
+                        <div class="flex items-center gap-2.5">
+                            <button
+                                class="h-9 px-4 border border-[#E5E7EB] rounded-full text-[13px] text-[#475569] bg-white hover:bg-[#F8FAFC] flex items-center gap-1.5 transition-colors"
+                            >
+                                <i
+                                    data-lucide="history"
+                                    class="w-3.5 h-3.5 text-[#64748B]"
+                                ></i>
+                                回顾昨天
+                            </button>
+                            <button
+                                class="h-9 px-4 border border-[#E5E7EB] rounded-full text-[13px] text-[#475569] bg-white hover:bg-[#F8FAFC] flex items-center gap-1.5 transition-colors"
+                            >
+                                <i
+                                    data-lucide="sparkles"
+                                    class="w-3.5 h-3.5 text-[#64748B]"
+                                ></i>
+                                总结最近
+                            </button>
+                            <button
+                                class="h-9 px-4 border border-[#E5E7EB] rounded-full text-[13px] text-[#475569] bg-white hover:bg-[#F8FAFC] flex items-center gap-1.5 transition-colors"
+                            >
+                                <i
+                                    data-lucide="calendar-days"
+                                    class="w-3.5 h-3.5 text-[#64748B]"
+                                ></i>
+                                查看历史回忆
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    id="stateChat"
+                    class="w-full max-w-[920px] mx-auto px-6 pt-10 pb-40 flex flex-col gap-10 state-transition opacity-0 pointer-events-none hidden"
+                >
+                    <div class="flex justify-end w-full">
+                        <div
+                            class="max-w-[680px] bg-[#F8FAFC] text-[#0F172A] rounded-[22px] px-[18px] py-4 text-[15px] leading-[1.7]"
+                        >
+                            <p id="chatUserContent">--</p>
+                        </div>
+                    </div>
+
+                    <div
+                        id="aiLoading"
+                        class="flex items-center gap-2 text-[13px] text-[#94A3B8] select-none transition-opacity duration-150"
+                    >
+                        <i
+                            data-lucide="loader"
+                            class="w-3.5 h-3.5 animate-spin"
+                        ></i>
+                        <span>正在检索回忆...</span>
+                    </div>
+
+                    <div
+                        id="aiResponse"
+                        class="flex flex-col w-full text-[15px] leading-[1.8] text-[#334155] gap-8 transition-opacity duration-300 opacity-0"
+                    >
+                        <div class="space-y-6 max-w-[820px]">
+                            <div>
+                                <h3
+                                    class="text-[13px] font-semibold text-[#0F172A] mb-2 select-none"
+                                >
+                                    找到的相关回忆
+                                </h3>
+                                <p class="text-[#475569]">
+                                    你最近多次提到「微服务网关」「工程决策」和「架构演进」。从记录来看，6月中旬你集中处理了网关路由重构和技术债务收敛，并在同一阶段开始沉淀一套架构选型评估方法。
+                                </p>
+                            </div>
+
+                            <div class="w-full h-[1px] bg-[#EEF2F7]"></div>
+
+                            <div>
+                                <h3
+                                    class="text-[13px] font-semibold text-[#0F172A] mb-2 select-none"
+                                >
+                                    AI 回答
+                                </h3>
+                                <ul
+                                    class="list-disc pl-5 space-y-1.5 text-[#475569]"
+                                >
+                                    <li>
+                                        你当时最关注的是如何降低长期维护成本，而不是单纯追求短期性能指标。
+                                    </li>
+                                    <li>
+                                        相关记录显示，你对「可复用的工程判断框架」表现出持续兴趣，这可能是后续技术复盘的主线。
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div class="w-full h-[1px] bg-[#EEF2F7]"></div>
+
+                            <div>
+                                <h3
+                                    class="text-[13px] font-semibold text-[#0F172A] mb-2.5 select-none"
+                                >
+                                    相关标签
+                                </h3>
+                                <div class="flex flex-wrap gap-2">
+                                    <span
+                                        class="px-2.5 py-1 bg-[#F1F5F9] rounded-full text-[12px] text-[#475569] font-medium"
+                                        >#微服务网关</span
+                                    >
+                                    <span
+                                        class="px-2.5 py-1 bg-[#F1F5F9] rounded-full text-[12px] text-[#475569] font-medium"
+                                        >#工程决策</span
+                                    >
+                                    <span
+                                        class="px-2.5 py-1 bg-[#F1F5F9] rounded-full text-[12px] text-[#475569] font-medium"
+                                        >#技术复盘</span
+                                    >
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            class="w-full max-w-[820px] bg-white border border-[#E5E7EB] rounded-[18px] p-4 shadow-card flex items-center justify-between select-none"
+                        >
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600"
+                                >
+                                    <i
+                                        data-lucide="check-circle-2"
+                                        class="w-4 h-4"
+                                    ></i>
+                                </div>
+                                <div>
+                                    <h4
+                                        class="text-[13px] font-semibold text-[#0F172A]"
+                                    >
+                                        可继续追问这段回忆
+                                    </h4>
+                                    <p
+                                        class="text-[12px] text-[#64748B] mt-0.5"
+                                    >
+                                        例如：当时为什么选择这个架构方案？
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button
+                                    class="px-3 py-1.5 text-[12px] font-medium text-[#475569] hover:bg-[#F8FAFC] rounded-lg border border-[#E5E7EB] transition-colors"
+                                >
+                                    查看来源
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    id="fixedChatInput"
+                    class="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white via-white/90 to-transparent flex items-start justify-center px-6 pointer-events-none transition-all opacity-0"
+                >
+                    <div
+                        class="w-full max-w-[760px] min-h-[52px] bg-white border border-[#E5E7EB] rounded-[28px] shadow-input grid grid-cols-[auto_1fr_auto] items-center py-[5px] pl-[7px] pr-2 pointer-events-auto"
+                    >
+                        <button
+                            class="w-9 h-9 flex items-center justify-center rounded-full text-[#111827] hover:bg-[#F8FAFC] transition-colors"
+                            title="添加素材"
+                        >
+                            <i data-lucide="plus" class="w-5 h-5"></i>
+                        </button>
+                        <textarea
+                            id="inputChat"
+                            rows="1"
+                            placeholder="继续追问你的回忆..."
+                            class="min-h-10 bg-transparent border-none outline-none px-3 py-2 text-[15px] font-normal text-[#0F172A] placeholder-[#94A3B8] resize-none max-h-24 no-scrollbar leading-relaxed"
+                        ></textarea>
+                        <button
+                            id="btnSendChat"
+                            class="w-9 h-9 flex items-center justify-center bg-[#0F172A] hover:bg-slate-800 text-white rounded-full transition-colors shadow-sm"
+                        >
+                            <i data-lucide="arrow-up" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <script>
+            // 初始化图标
+            lucide.createIcons();
+
+            // DOM 节点
+            const stateEntry = document.getElementById("stateEntry");
+            const stateChat = document.getElementById("stateChat");
+            const fixedChatInput = document.getElementById("fixedChatInput");
+            const inputEntry = document.getElementById("inputEntry");
+            const inputChat = document.getElementById("inputChat");
+            const btnSendEntry = document.getElementById("btnSendEntry");
+            const btnSendChat = document.getElementById("btnSendChat");
+            const btnNewChat = document.getElementById("btnNewChat");
+            const chatUserContent = document.getElementById("chatUserContent");
+            const aiLoading = document.getElementById("aiLoading");
+            const aiResponse = document.getElementById("aiResponse");
+
+            // 初始化各状态元素
+            stateEntry.style.opacity = "1";
+            stateEntry.style.transform = "translateY(0)";
+            stateChat.style.opacity = "0";
+            stateChat.style.transform = "translateY(16px)";
+            fixedChatInput.style.opacity = "0";
+            fixedChatInput.style.transform = "translateY(20px)";
+
+            // 切换到对话态逻辑
+            function transitToChatState(text) {
+                if (!text.trim()) return;
+
+                chatUserContent.textContent = text;
+
+                // 1. 入口态淡出（上移 + 透明）
+                stateEntry.style.opacity = "0";
+                stateEntry.style.transform = "translateY(-12px)";
+                stateEntry.style.pointerEvents = "none";
+
+                setTimeout(() => {
+                    // 2. 入口态完全隐藏
+                    stateEntry.classList.add("hidden");
+
+                    // 3. 对话态准备
+                    stateChat.classList.remove("hidden");
+                    fixedChatInput.classList.remove("hidden");
+
+                    // 强制重排，确保 transition 生效
+                    void stateChat.offsetHeight;
+
+                    // 4. 对话态淡入（从下方移入）
+                    stateChat.style.opacity = "1";
+                    stateChat.style.transform = "translateY(0)";
+                    stateChat.style.pointerEvents = "auto";
+
+                    // 5. 底部输入框淡入
+                    fixedChatInput.style.opacity = "1";
+                    fixedChatInput.style.transform = "translateY(0)";
+                    fixedChatInput.style.pointerEvents = "auto";
+
+                    // 6. AI Loading 淡入
+                    aiLoading.classList.remove("hidden");
+                    aiLoading.style.opacity = "1";
+                    aiResponse.style.opacity = "0";
+                    aiResponse.classList.add("hidden");
+
+                    setTimeout(() => {
+                        aiLoading.style.opacity = "0";
+                        setTimeout(() => {
+                            aiLoading.classList.add("hidden");
+                            aiResponse.classList.remove("hidden");
+                            void aiResponse.offsetHeight;
+                            aiResponse.style.opacity = "1";
+                        }, 150);
+                    }, 1500);
+                }, 250);
+            }
+
+            // 切换回首页入口态逻辑
+            function transitToEntryState() {
+                inputEntry.value = "";
+                inputChat.value = "";
+
+                // 1. 对话态淡出（下移 + 透明）
+                stateChat.style.opacity = "0";
+                stateChat.style.transform = "translateY(16px)";
+                stateChat.style.pointerEvents = "none";
+
+                fixedChatInput.style.opacity = "0";
+                fixedChatInput.style.transform = "translateY(20px)";
+                fixedChatInput.style.pointerEvents = "none";
+
+                setTimeout(() => {
+                    stateChat.classList.add("hidden");
+                    fixedChatInput.classList.add("hidden");
+
+                    // 2. 入口态准备
+                    stateEntry.classList.remove("hidden");
+                    void stateEntry.offsetHeight;
+
+                    // 3. 入口态淡入（从上方移入）
+                    stateEntry.style.opacity = "1";
+                    stateEntry.style.transform = "translateY(0)";
+                    stateEntry.style.pointerEvents = "auto";
+
+                    aiLoading.classList.remove("hidden");
+                    aiResponse.classList.add("hidden");
+                    aiResponse.style.opacity = "0";
+                }, 350);
+            }
+
+            // 事件监听
+            btnSendEntry.addEventListener("click", () =>
+                transitToChatState(inputEntry.value),
+            );
+            inputEntry.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") transitToChatState(inputEntry.value);
+            });
+
+            btnSendChat.addEventListener("click", () => {
+                if (inputChat.value.trim()) {
+                    alert("AI 正在根据你的回忆继续回答...");
+                    inputChat.value = "";
+                }
+            });
+            inputChat.addEventListener("keydown", (e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    btnSendChat.click();
+                }
+            });
+
+            btnNewChat.addEventListener("click", transitToEntryState);
+
+            inputChat.addEventListener("input", function () {
+                this.style.height = "auto";
+                this.style.height = this.scrollHeight + "px";
+            });
+        </script>
+    </body>
+</html>

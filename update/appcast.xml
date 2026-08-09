@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8'?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+  <channel>
+    <title>XiaoYuNote Updates</title>
+    <description>XiaoYuNote desktop app updates</description>
+    <language>zh-CN</language>
+    <item>
+      <title>XiaoYuNote v1.0.7</title>
+      <sparkle:version>1.0.7</sparkle:version>
+      <sparkle:shortVersionString>1.0.7</sparkle:shortVersionString>
+      <sparkle:releaseNotesLink>https://github.com/Radiant303/XiaoYuNote/releases/download/1.0.7/LATESTCHANGELOG.md</sparkle:releaseNotesLink>
+      <pubDate>Fri, 07 Aug 2026 23:05:20 +0800</pubDate>
+      <enclosure url="https://github.com/Radiant303/XiaoYuNote/releases/download/1.0.7/XiaoYuNote-1.0.7-macos-arm64.dmg" sparkle:edSignature="RmEhGMJ1BSZnO445nbJgp6jJCKnTtKI/n8fl3D5BOCOBkIgOpMBcXWwIGOJzqzqOPoEaTz92guYFxGX+xe9gBQ==" sparkle:os="macos" length="38735020" type="application/octet-stream" />
+    </item>
+  </channel>
+</rss>

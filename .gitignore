@@ -1,0 +1,8 @@
+# 构建产物
+build/
+dist/
+
+# 环境
+.vscode/
+.idea/
+*.iml

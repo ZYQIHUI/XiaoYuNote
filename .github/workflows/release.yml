@@ -1,0 +1,502 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '[0-9]*.[0-9]*.[0-9]*'
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  prepare-release:
+    name: Prepare Release Metadata
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.prepare.outputs.version }}
+      tag: ${{ steps.prepare.outputs.tag }}
+      release_name: ${{ steps.prepare.outputs.release_name }}
+      macos_asset: ${{ steps.prepare.outputs.macos_asset }}
+      windows_asset: ${{ steps.prepare.outputs.windows_asset }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Verify tag belongs to default branch
+        run: |
+          set -euo pipefail
+          git fetch origin "${{ github.event.repository.default_branch }}:refs/remotes/origin/${{ github.event.repository.default_branch }}"
+          if ! git merge-base --is-ancestor "${{ github.sha }}" "origin/${{ github.event.repository.default_branch }}"; then
+            echo "Tag commit ${{ github.sha }} is not reachable from ${{ github.event.repository.default_branch }}."
+            exit 1
+          fi
+
+      - name: Prepare release metadata
+        id: prepare
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python3 .github/scripts/prepare_release.py \
+            --tag "$RELEASE_TAG" \
+            --pubspec spring_note/pubspec.yaml \
+            --changelog CHANGELOG.md \
+            --notes-output release-notes.md \
+            --outputs-file "$GITHUB_OUTPUT"
+
+      - name: Upload release notes
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: release-notes.md
+          if-no-files-found: error
+
+  release-checks:
+    name: Release Checks
+    runs-on: ubuntu-latest
+    needs: prepare-release
+    defaults:
+      run:
+        working-directory: spring_note
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Run release script tests
+        working-directory: ${{ github.workspace }}
+        run: python3 -m unittest discover .github/scripts/tests
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Flutter analyze
+        run: flutter analyze
+
+      - name: Flutter test
+        run: flutter test
+
+      - name: Rust test
+        working-directory: spring_note/rust
+        run: cargo test
+
+  windows-build:
+    name: Windows Release Build
+    runs-on: windows-latest
+    needs:
+      - prepare-release
+      - release-checks
+    defaults:
+      run:
+        working-directory: spring_note
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build Windows release
+        run: flutter build windows --release --dart-define SPRINGNOTE_UPDATE_BASE_URL=https://api.github.com/repos/${{ github.repository }}/contents/update
+
+      - name: Validate pinned VC++ runtime
+        shell: pwsh
+        run: |
+          $runtimePath = "installer\prerequisites\VC_redist.x64.exe"
+          $expectedVersion = "14.51.36247.0"
+          $expectedHash = "843068991DAAA1F73AD9F6239BCE4D0F6A07A51F18C37EA2A867E9BECA71295C"
+
+          if (-not (Test-Path -LiteralPath $runtimePath)) {
+            throw "Pinned VC++ Redistributable is missing."
+          }
+
+          $runtime = Get-Item -LiteralPath $runtimePath
+          if ($runtime.VersionInfo.FileVersion -ne $expectedVersion) {
+            throw "Unexpected VC++ Redistributable version: $($runtime.VersionInfo.FileVersion)"
+          }
+
+          $actualHash = (Get-FileHash -LiteralPath $runtimePath -Algorithm SHA256).Hash
+          if ($actualHash -ne $expectedHash) {
+            throw "VC++ Redistributable checksum mismatch."
+          }
+
+          $signature = Get-AuthenticodeSignature -LiteralPath $runtimePath
+          if (($signature.Status -ne "Valid") -or
+              ($signature.SignerCertificate.Subject -notmatch "CN=Microsoft Corporation")) {
+            throw "VC++ Redistributable signature is invalid."
+          }
+
+          $compilerConfig = Get-ChildItem "build\windows\x64\CMakeFiles" `
+            -Recurse -Filter "CMakeCXXCompiler.cmake" |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+          if ($null -eq $compilerConfig) {
+            throw "CMake compiler metadata was not generated."
+          }
+
+          $compilerMetadata = Get-Content -LiteralPath $compilerConfig.FullName -Raw
+          $compilerMatch = [regex]::Match(
+            $compilerMetadata,
+            'set\(CMAKE_CXX_COMPILER "([^"]+)"\)'
+          )
+          if (-not $compilerMatch.Success) {
+            throw "Unable to locate the MSVC compiler used by CMake."
+          }
+
+          $compilerVersionMatch = [regex]::Match(
+            $compilerMetadata,
+            'set\(CMAKE_CXX_COMPILER_VERSION "([^"]+)"\)'
+          )
+          if (-not $compilerVersionMatch.Success) {
+            throw "Unable to determine the MSVC compiler version used by CMake."
+          }
+
+          $compilerVersion = [version]$compilerVersionMatch.Groups[1].Value
+          # NOTE: The pinned VC++ Redistributable (14.51.36247.0) is the latest
+          # publicly available from https://aka.ms/vc14/vc_redist.x64.exe, while
+          # the windows-latest runner may already ship a newer 14.51 toolset.
+          # Patch-level gaps are acceptable because all v14.x runtimes are binary
+          # compatible; the dumpbin linker-version check below still guards
+          # against binaries that require a newer minor runtime (e.g. 14.52).
+          # When that happens, download the latest redistributable, replace
+          # installer/prerequisites/VC_redist.x64.exe, and bump the pins above.
+          $maximumCompilerVersion = [version]"19.51.99999.0"
+          if ($compilerVersion -gt $maximumCompilerVersion) {
+            throw "MSVC $compilerVersion is newer than the pinned VC++ Runtime supports."
+          }
+
+          $compilerPath = $compilerMatch.Groups[1].Value.Replace('/', '\')
+          $dumpbin = Join-Path (Split-Path -Parent $compilerPath) "dumpbin.exe"
+          if (-not (Test-Path -LiteralPath $dumpbin)) {
+            throw "dumpbin.exe was not found beside the selected MSVC compiler."
+          }
+
+          $releaseDir = "build\windows\x64\runner\Release"
+          $unsupported = @()
+          Get-ChildItem $releaseDir -Recurse -File |
+            Where-Object { $_.Extension -in ".exe", ".dll" } |
+            ForEach-Object {
+              $headers = & $dumpbin /nologo /headers $_.FullName 2>$null
+              $linkerMatch = [regex]::Match(
+                ($headers -join "`n"),
+                '(\d+)\.(\d+)\s+linker version'
+              )
+              if ($linkerMatch.Success) {
+                $major = [int]$linkerMatch.Groups[1].Value
+                $minor = [int]$linkerMatch.Groups[2].Value
+                if (($major -gt 14) -or (($major -eq 14) -and ($minor -gt 51))) {
+                  $unsupported += "$($_.Name): $major.$minor"
+                }
+              }
+            }
+
+          if ($unsupported.Count -gt 0) {
+            throw "Windows binaries require a newer VC++ Runtime: $($unsupported -join ', ')"
+          }
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --yes --no-progress
+
+      - name: Package Windows installer
+        shell: pwsh
+        env:
+          SPRINGNOTE_APP_VERSION: ${{ needs.prepare-release.outputs.version }}
+          SPRINGNOTE_BUILD_OUTPUT_DIR: ${{ github.workspace }}\spring_note\build\windows\x64\runner\Release
+          SPRINGNOTE_SETUP_OUTPUT_DIR: ${{ github.workspace }}\spring_note\build\windows\installer
+        run: |
+          $isccCommand = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+          if ($null -ne $isccCommand) {
+            $iscc = $isccCommand.Source
+          } else {
+            $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          }
+          if (-not (Test-Path $iscc)) {
+            throw "Inno Setup compiler not found."
+          }
+          & $iscc "installer\springnote.iss"
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: XiaoYuNote-${{ needs.prepare-release.outputs.version }}-windows-x64-setup
+          path: spring_note/build/windows/installer/${{ needs.prepare-release.outputs.windows_asset }}
+          if-no-files-found: error
+
+  macos-build:
+    name: macOS Release Build
+    runs-on: macos-26
+    needs:
+      - prepare-release
+      - release-checks
+    defaults:
+      run:
+        working-directory: spring_note
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Verify macOS runner architecture
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$(uname -m)" != "arm64" ]; then
+            echo "The current release format expects a macos-arm64 DMG."
+            exit 1
+          fi
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Configure Sparkle public key
+        shell: bash
+        env:
+          SPARKLE_PUBLIC_ED_KEY: ${{ secrets.SPARKLE_PUBLIC_ED_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SPARKLE_PUBLIC_ED_KEY}" ]; then
+            echo "Missing SPARKLE_PUBLIC_ED_KEY secret."
+            exit 1
+          fi
+          SPARKLE_PUBLIC_ED_KEY="${SPARKLE_PUBLIC_ED_KEY}" python3 - <<'PY'
+          import os
+          import plistlib
+          from pathlib import Path
+
+          path = Path("macos/Runner/Info.plist")
+          data = plistlib.loads(path.read_bytes())
+          data["SUPublicEDKey"] = os.environ["SPARKLE_PUBLIC_ED_KEY"]
+          path.write_bytes(plistlib.dumps(data, sort_keys=False))
+          PY
+
+      - name: Build macOS release
+        run: flutter build macos --release --dart-define SPRINGNOTE_UPDATE_BASE_URL=https://api.github.com/repos/${{ github.repository }}/contents/update
+
+      - name: Package macOS DMG
+        shell: bash
+        env:
+          VERSION: ${{ needs.prepare-release.outputs.version }}
+          MACOS_ASSET: ${{ needs.prepare-release.outputs.macos_asset }}
+        run: |
+          set -euo pipefail
+
+          app_name="XiaoYuNote"
+          artifact_name="${MACOS_ASSET%.dmg}"
+          release_dir="build/macos/Build/Products/Release"
+          stage_dir="${release_dir}/${artifact_name}"
+          dmg_path="${release_dir}/${MACOS_ASSET}"
+
+          rm -rf "$stage_dir" "$dmg_path"
+          mkdir -p "$stage_dir"
+          ditto "${release_dir}/spring_note.app" "${stage_dir}/${app_name}.app"
+          ln -s /Applications "${stage_dir}/Applications"
+
+          hdiutil create \
+            -volname "$app_name" \
+            -srcfolder "$stage_dir" \
+            -ov \
+            -format UDZO \
+            "$dmg_path"
+
+          hdiutil verify "$dmg_path"
+
+      - name: Upload macOS DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: XiaoYuNote-${{ needs.prepare-release.outputs.version }}-macos-arm64
+          path: spring_note/build/macos/Build/Products/Release/${{ needs.prepare-release.outputs.macos_asset }}
+          if-no-files-found: error
+
+      - name: Sign macOS update
+        shell: bash
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+          MACOS_ASSET: ${{ needs.prepare-release.outputs.macos_asset }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SPARKLE_ED_PRIVATE_KEY}" ]; then
+            echo "Missing SPARKLE_ED_PRIVATE_KEY secret."
+            exit 1
+          fi
+          asset_path="build/macos/Build/Products/Release/${MACOS_ASSET}"
+          ed_signature="$(printf '%s' "$SPARKLE_ED_PRIVATE_KEY" | macos/Pods/Sparkle/bin/sign_update --ed-key-file - -p "$asset_path" | tr -d '\r\n')"
+          length="$(stat -f '%z' "$asset_path")"
+          if [ -z "$ed_signature" ] || [ -z "$length" ]; then
+            echo "Failed to generate macOS update signature."
+            exit 1
+          fi
+          ED_SIGNATURE="$ed_signature" UPDATE_LENGTH="$length" python3 -c 'import json, os, pathlib; pathlib.Path(os.environ["GITHUB_WORKSPACE"], "macos-update-signature.json").write_text(json.dumps({"edSignature": os.environ["ED_SIGNATURE"], "length": os.environ["UPDATE_LENGTH"]}), encoding="utf-8")'
+
+      - name: Upload macOS update signature
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-update-signature
+          path: macos-update-signature.json
+          if-no-files-found: error
+
+  publish-release:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    needs:
+      - prepare-release
+      - windows-build
+      - macos-build
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Download release assets
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Write update metadata
+        run: |
+          python3 .github/scripts/write_update_metadata.py \
+            --version "${{ needs.prepare-release.outputs.version }}" \
+            --repo "${{ github.repository }}" \
+            --macos-asset "${{ needs.prepare-release.outputs.macos_asset }}" \
+            --windows-asset "${{ needs.prepare-release.outputs.windows_asset }}" \
+            --notes release-assets/release-notes.md \
+            --output-dir release-assets/update \
+            --macos-signature-file release-assets/macos-update-signature.json
+
+      - name: Generate SHA256 checksums
+        working-directory: release-assets
+        run: |
+          set -euo pipefail
+          sha256sum \
+            "${{ needs.prepare-release.outputs.macos_asset }}" \
+            "${{ needs.prepare-release.outputs.windows_asset }}" \
+            update/mac.json \
+            update/windows.json \
+            update/appcast.xml \
+            update/LATESTCHANGELOG.md \
+            > SHA256SUMS.txt
+
+      - name: Verify release assets
+        run: |
+          set -euo pipefail
+          test -s "release-assets/${{ needs.prepare-release.outputs.macos_asset }}"
+          test -s "release-assets/${{ needs.prepare-release.outputs.windows_asset }}"
+          test -s "release-assets/update/mac.json"
+          test -s "release-assets/update/windows.json"
+          test -s "release-assets/update/appcast.xml"
+          test -s "release-assets/update/LATESTCHANGELOG.md"
+          test -s "release-assets/SHA256SUMS.txt"
+          python3 .github/scripts/verify_update_metadata.py \
+            --version "${{ needs.prepare-release.outputs.version }}" \
+            --repo "${{ github.repository }}" \
+            --macos-asset "${{ needs.prepare-release.outputs.macos_asset }}" \
+            --windows-asset "${{ needs.prepare-release.outputs.windows_asset }}" \
+            --metadata-dir release-assets/update
+          cd release-assets
+          sha256sum --check SHA256SUMS.txt
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare-release.outputs.tag }}
+          name: ${{ needs.prepare-release.outputs.release_name }}
+          body_path: release-assets/release-notes.md
+          draft: false
+          prerelease: false
+          make_latest: true
+          overwrite_files: true
+          fail_on_unmatched_files: true
+          files: |
+            release-assets/${{ needs.prepare-release.outputs.macos_asset }}
+            release-assets/${{ needs.prepare-release.outputs.windows_asset }}
+            release-assets/update/mac.json
+            release-assets/update/windows.json
+            release-assets/update/appcast.xml
+            release-assets/update/LATESTCHANGELOG.md
+            release-assets/SHA256SUMS.txt
+
+      - name: Commit update metadata
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          for attempt in 1 2 3; do
+            git fetch origin "${{ github.event.repository.default_branch }}:refs/remotes/origin/${{ github.event.repository.default_branch }}" --depth=1
+            git switch -C release-metadata "origin/${{ github.event.repository.default_branch }}"
+            current_update_version="$(python3 -c 'import json, pathlib, re; versions = [json.loads(path.read_text(encoding="utf-8")).get("version", "0.0.0") for name in ("mac.json", "windows.json") for path in [pathlib.Path("update") / name] if path.exists()]; parts = lambda version: tuple(int(part) for part in str(version).split("+", 1)[0].strip().split(".")) if re.fullmatch(r"\d+\.\d+\.\d+", str(version).split("+", 1)[0].strip()) else (0, 0, 0); print(max(versions or ["0.0.0"], key=parts))')"
+            if python3 .github/scripts/verify_update_metadata.py \
+              --is-newer-than "$current_update_version" "${{ needs.prepare-release.outputs.version }}" \
+              --version "${{ needs.prepare-release.outputs.version }}" \
+              --repo "${{ github.repository }}" \
+              --macos-asset "${{ needs.prepare-release.outputs.macos_asset }}" \
+              --windows-asset "${{ needs.prepare-release.outputs.windows_asset }}" \
+              --metadata-dir update
+            then
+              echo "Update metadata is already newer (${current_update_version}); skipping metadata write for ${{ needs.prepare-release.outputs.version }}."
+              exit 0
+            fi
+            cp release-assets/update/mac.json update/mac.json
+            cp release-assets/update/windows.json update/windows.json
+            cp release-assets/update/appcast.xml update/appcast.xml
+            cp release-assets/update/LATESTCHANGELOG.md update/LATESTCHANGELOG.md
+            if git diff --quiet -- update/mac.json update/windows.json update/appcast.xml update/LATESTCHANGELOG.md; then
+              echo "Update metadata is already current."
+              exit 0
+            fi
+            git add update/mac.json update/windows.json update/appcast.xml update/LATESTCHANGELOG.md
+            git commit -m "chore: update release metadata for ${{ needs.prepare-release.outputs.version }}"
+            if git push origin HEAD:${{ github.event.repository.default_branch }}; then
+              exit 0
+            fi
+            echo "Metadata push failed on attempt ${attempt}; retrying from latest default branch."
+            sleep $((attempt * 3))
+          done
+
+          echo "Failed to push update metadata after 3 attempts."
+          exit 1

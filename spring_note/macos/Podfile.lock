@@ -1,0 +1,53 @@
+PODS:
+  - file_selector_macos (0.0.1):
+    - FlutterMacOS
+  - FlutterMacOS (1.0.0)
+  - package_info_plus (0.0.1):
+    - FlutterMacOS
+  - rust (0.0.1):
+    - FlutterMacOS
+  - screen_retriever_macos (0.0.1):
+    - FlutterMacOS
+  - Sparkle (2.9.3)
+  - window_manager (0.5.0):
+    - FlutterMacOS
+
+DEPENDENCIES:
+  - file_selector_macos (from `Flutter/ephemeral/.symlinks/plugins/file_selector_macos/macos`)
+  - FlutterMacOS (from `Flutter/ephemeral`)
+  - package_info_plus (from `Flutter/ephemeral/.symlinks/plugins/package_info_plus/macos`)
+  - rust (from `Flutter/ephemeral/.symlinks/plugins/rust/macos`)
+  - screen_retriever_macos (from `Flutter/ephemeral/.symlinks/plugins/screen_retriever_macos/macos`)
+  - Sparkle (= 2.9.3)
+  - window_manager (from `Flutter/ephemeral/.symlinks/plugins/window_manager/macos`)
+
+SPEC REPOS:
+  trunk:
+    - Sparkle
+
+EXTERNAL SOURCES:
+  file_selector_macos:
+    :path: Flutter/ephemeral/.symlinks/plugins/file_selector_macos/macos
+  FlutterMacOS:
+    :path: Flutter/ephemeral
+  package_info_plus:
+    :path: Flutter/ephemeral/.symlinks/plugins/package_info_plus/macos
+  rust:
+    :path: Flutter/ephemeral/.symlinks/plugins/rust/macos
+  screen_retriever_macos:
+    :path: Flutter/ephemeral/.symlinks/plugins/screen_retriever_macos/macos
+  window_manager:
+    :path: Flutter/ephemeral/.symlinks/plugins/window_manager/macos
+
+SPEC CHECKSUMS:
+  file_selector_macos: 9e9e068e90ebee155097d00e89ae91edb2374db7
+  FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
+  package_info_plus: f0052d280d17aa382b932f399edf32507174e870
+  rust: 439c443b710b8595978daf22738de7950e62afa5
+  screen_retriever_macos: c5508cc3c66ff0d4db650480cf0ab691e220d933
+  Sparkle: 39dbdf28637f6056fbf5ee6494bdbfae54f49f41
+  window_manager: b729e31d38fb04905235df9ea896128991cad99e
+
+PODFILE CHECKSUM: 8a7723d541d0b5e33350007f308f2a86016d7765
+
+COCOAPODS: 1.16.2

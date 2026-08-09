@@ -1,0 +1,33 @@
+# XiaoYu 配置文件 — 用户可调参数
+# 文档：小雨Agent设计-r1.md 第 4 节
+
+[data]
+sources = ["个人", "小组", "文档", "VDMS在线办公平台"]
+exclude_dirs = [".reasonix", "XiaoYu", "新建文件夹", ".git"]
+exclude_exts = ["png", "jpeg", "jpg", "mp4", "ofd", "zip", "xmind", "doc", "ini"]
+max_file_mb = 50
+
+[chunk]
+size = 600
+overlap_ratio = 0.1
+min_size = 50
+
+[retrieval]
+top_k = 5
+max_per_file = 2
+max_context_chars = 6000
+score_threshold = 0.0
+enable_bm25 = false
+include_null_date = true
+
+[vector]
+batch_size = 32
+dim = 1024
+query_instruction = ""
+
+[store]
+path = "data/kb.sqlite3"
+
+[security]
+skip_sensitive_files = true
+sensitive_fields = ["密码", "password", "secret", "key", "token", "账号", "appid"]

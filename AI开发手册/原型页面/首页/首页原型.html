@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>AI 智能便签 - 首页</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <script src="https://cdn.jsdelivr.net/npm/@lucide/lab@latest/dist/lucide.min.js"></script>
+        <script src="https://unpkg.com/lucide@latest"></script>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        fontFamily: {
+                            sans: [
+                                "Inter",
+                                "SF Pro Display",
+                                "-apple-system",
+                                "BlinkMacSystemFont",
+                                "Segoe UI",
+                                "Roboto",
+                                "PingFang SC",
+                                "sans-serif",
+                            ],
+                        },
+                        boxShadow: {
+                            premium:
+                                "0 4px 30px rgba(0, 0, 0, 0.015), 0 1px 3px rgba(0, 0, 0, 0.02)",
+                            "card-hover":
+                                "0 10px 40px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.02)",
+                        },
+                    },
+                },
+            };
+        </script>
+        <style>
+            body {
+                background-color: #fcfcfd;
+                color: #1e293b;
+                -webkit-font-smoothing: antialiased;
+            }
+            .no-scrollbar::-webkit-scrollbar {
+                display: none;
+            }
+            .no-scrollbar {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+
+            /* --- 核心编排动画 --- */
+
+            /* 1. 热力图色块织入 */
+            @keyframes cellIn {
+                0% {
+                    transform: scale(0.4);
+                    opacity: 0;
+                }
+                100% {
+                    transform: scale(1);
+                    opacity: 1;
+                }
+            }
+            .animate-cell-in {
+                animation: cellIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+            }
+
+            /* 2. 圆环进度条平滑过渡 */
+            .progress-ring-circle {
+                transition: stroke-dasharray 1.2s cubic-bezier(0.25, 1, 0.5, 1);
+            }
+        </style>
+    </head>
+    <body
+        class="flex h-screen w-full overflow-hidden font-sans antialiased bg-[#fcfcfd]"
+    >
+        <aside
+            class="w-20 h-full flex flex-col justify-between py-7 px-4 select-none z-10 shrink-0 bg-[#fcfcfd]"
+        >
+            <nav class="flex flex-col items-center gap-3">
+                <a
+                    href="#"
+                    aria-label="首页"
+                    title="首页"
+                    class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-900 bg-slate-100/80 transition-colors"
+                >
+                    <i
+                        data-lucide="layout-dashboard"
+                        class="w-4 h-4 text-slate-800"
+                    ></i>
+                </a>
+                <a
+                    href="#"
+                    aria-label="便签"
+                    title="便签"
+                    class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-50 transition-colors"
+                >
+                    <i data-lucide="sticky-note" class="w-4 h-4"></i>
+                </a>
+                <a
+                    href="#"
+                    aria-label="回忆本"
+                    title="回忆本"
+                    class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-50 transition-colors"
+                >
+                    <i data-lucide="book-open" class="w-4 h-4"></i>
+                </a>
+
+            </nav>
+
+            <a
+                href="#"
+                aria-label="设置"
+                title="设置"
+                class="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-800 hover:bg-slate-50 transition-colors"
+            >
+                <i data-lucide="settings" class="w-4 h-4"></i>
+            </a>
+        </aside>
+
+        <main
+            class="flex-1 h-full overflow-y-auto no-scrollbar flex flex-col px-12 py-8 max-w-[1184px] mx-auto w-full gap-8"
+        >
+            <header
+                class="flex items-center justify-between w-full select-none"
+            >
+                <h1 class="text-lg font-semibold tracking-tight text-slate-900">
+                    首页
+                </h1>
+                <button
+                    class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100/80 transition-all"
+                >
+                    <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                </button>
+            </header>
+
+            <section
+                class="w-full bg-white rounded-[26px] border border-slate-200/60 p-8 shadow-[0_4px_30px_rgba(0,0,0,0.01)] flex items-center justify-between gap-12 transition-all duration-300 hover:shadow-card-hover"
+            >
+                <div class="flex items-center gap-12 flex-1">
+                    <div class="flex flex-col gap-2 select-none">
+                        <span
+                            class="text-[11px] font-medium tracking-wider text-blue-500 uppercase"
+                            >Level 04</span
+                        >
+                        <div
+                            class="relative w-16 h-16 flex items-center justify-center"
+                        >
+                            <svg
+                                class="w-full h-full transform -rotate-90"
+                                viewBox="0 0 36 36"
+                            >
+                                <path
+                                    class="text-blue-50"
+                                    stroke-width="2.5"
+                                    stroke="currentColor"
+                                    fill="none"
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                />
+                                <path
+                                    id="progressCircle"
+                                    class="text-blue-500 progress-ring-circle"
+                                    stroke-dasharray="0, 100"
+                                    stroke-width="2.5"
+                                    stroke-linecap="round"
+                                    stroke="currentColor"
+                                    fill="none"
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                />
+                            </svg>
+                            <div
+                                class="absolute text-xs font-semibold text-blue-600"
+                            >
+                                75%
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col">
+                        <span
+                            class="text-[11px] font-medium tracking-wider text-slate-400 uppercase mb-1 select-none"
+                            >Earnings Today</span
+                        >
+                        <div class="flex items-baseline gap-3">
+                            <span
+                                id="earningsCounter"
+                                class="text-[56px] font-bold tracking-tighter text-slate-900 leading-none font-mono"
+                                >0</span
+                            >
+                            <span
+                                class="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md flex items-center gap-0.5 select-none"
+                            >
+                                <i data-lucide="trending-up" class="w-3 h-3"></i
+                                >+0.12 c/s
+                            </span>
+                        </div>
+                        <span class="text-xs text-slate-400 mt-2 select-none"
+                            >累计总收益
+                            <span
+                                id="totalCoins"
+                                class="font-medium text-slate-600 font-mono"
+                                >14,250</span
+                            >
+                            coins</span
+                        >
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-3 pl-8 border-l border-slate-100">
+                    <div class="flex items-center justify-between select-none">
+                        <span
+                            class="text-[11px] font-medium tracking-wider text-slate-400 uppercase"
+                            >Activity Input</span
+                        >
+                        <span class="text-[11px] text-emerald-500"
+                            >最近活跃</span
+                        >
+                    </div>
+                    <div
+                        class="grid grid-flow-col grid-rows-7 gap-[3px] relative z-10"
+                        id="heatmap"
+                    ></div>
+                    <div
+                        class="flex items-center gap-6 mt-1 text-xs text-slate-400 select-none"
+                    >
+                        <div>
+                            本周新增:
+                            <span class="font-medium text-slate-700"
+                                >18 篇</span
+                            >
+                        </div>
+                        <div>
+                            连续记录:
+                            <span class="font-medium text-slate-700"
+                                >12 天</span
+                            >
+                        </div>
+                        <div>
+                            上次同步:
+                            <span class="font-medium text-slate-500"
+                                >3分钟前</span
+                            >
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section
+                class="w-full flex flex-col bg-slate-50/60 border border-slate-200/60 rounded-2xl p-4 transition-all focus-within:bg-slate-50/90 focus-within:border-slate-300/80"
+            >
+                <textarea
+                    class="w-full bg-transparent text-sm text-slate-800 placeholder-slate-400/90 border-none outline-none resize-none h-24 no-scrollbar leading-relaxed"
+                    placeholder="写下你的想法，AI 将自动整理并生成结构化内容..."
+                ></textarea>
+
+                <div
+                    class="flex items-center justify-between pt-2 border-t border-slate-100/50 select-none"
+                >
+                    <div class="flex items-center gap-1">
+                        <button
+                            class="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-white transition-all"
+                            title="上传图片"
+                        >
+                            <i data-lucide="image" class="w-4 h-4"></i>
+                        </button>
+                        <button
+                            class="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-white transition-all"
+                            title="添加文件"
+                        >
+                            <i data-lucide="paperclip" class="w-4 h-4"></i>
+                        </button>
+                        <button
+                            class="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-white transition-all"
+                            title="提及功能"
+                        >
+                            <i data-lucide="at-sign" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-4">
+                        <span class="text-xs text-slate-400">0 字</span>
+                        <button
+                            class="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-full text-xs font-medium transition-all shadow-sm flex items-center gap-1.5"
+                        >
+                            <span>智能生成</span>
+                            <i
+                                data-lucide="sparkles"
+                                class="w-3 h-3 text-emerald-400"
+                            ></i>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section
+                class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full select-none"
+            >
+                <div
+                    class="bg-white rounded-2xl border border-slate-200/60 p-7 flex flex-col justify-between gap-12"
+                >
+                    <div class="flex items-center justify-between flex-1">
+                        <div class="flex flex-col gap-2 select-none">
+                            <span
+                                class="text-[10px] font-medium tracking-wider text-slate-400 uppercase"
+                                >Completed · 完成事项</span
+                            >
+                            <div class="flex flex-col gap-1 mt-1">
+                                <p
+                                    class="text-xs text-slate-600 truncate max-w-[180px]"
+                                >
+                                    重构微服务网网关架构路由配置
+                                </p>
+                                <p
+                                    class="text-xs text-slate-400 truncate max-w-[180px]"
+                                >
+                                    整理工程思维决策分析大纲
+                                </p>
+                            </div>
+                        </div>
+                        <span
+                            class="text-4xl font-semibold tracking-tight text-slate-900 leading-none font-mono"
+                            >06</span
+                        >
+                    </div>
+                </div>
+
+                <div
+                    class="bg-white rounded-2xl border border-slate-200/60 p-7 flex flex-col justify-between gap-12"
+                >
+                    <div class="flex items-center justify-between flex-1">
+                        <div class="flex flex-col gap-2 select-none">
+                            <span
+                                class="text-[10px] font-semibold tracking-wider text-red-400 uppercase"
+                                >Issues · 问题记录</span
+                            >
+                            <div class="flex flex-col gap-1 mt-1">
+                                <p
+                                    class="text-xs text-slate-600 truncate max-w-[180px]"
+                                >
+                                    Nacos Environment Heartbeat Timeout...
+                                </p>
+                                <p
+                                    class="text-xs text-slate-400 truncate max-w-[180px]"
+                                >
+                                    Conda Cross-Platform Build Dependency...
+                                </p>
+                            </div>
+                        </div>
+                        <span
+                            class="text-4xl font-semibold tracking-tight text-slate-900 leading-none font-mono"
+                            >02</span
+                        >
+                    </div>
+                </div>
+
+                <div
+                    class="bg-white rounded-2xl border border-slate-200/60 p-7 flex flex-col justify-between gap-12"
+                >
+                    <div class="flex items-center justify-between flex-1">
+                        <div class="flex flex-col gap-2 select-none">
+                            <span
+                                class="text-[10px] font-medium tracking-wider text-slate-400 uppercase"
+                                >Next Steps · 明日计划</span
+                            >
+                            <div class="flex flex-col gap-1 mt-1">
+                                <p
+                                    class="text-xs text-slate-600 truncate max-w-[180px]"
+                                >
+                                    联调 Cocos 自动化场景切换器
+                                </p>
+                                <p
+                                    class="text-xs text-slate-400 truncate max-w-[180px]"
+                                >
+                                    Rust Axum 图片渲染服务压测
+                                </p>
+                            </div>
+                        </div>
+                        <span
+                            class="text-4xl font-semibold tracking-tight text-slate-900 leading-none font-mono"
+                            >04</span
+                        >
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <script>
+            lucide.createIcons();
+
+            // 统一主轴时间启动点
+            const TIMELINE_START = 300;
+
+            // ----------------------------------------------------
+            // 1. 热力图流淌渲染
+            // ----------------------------------------------------
+            const heatmap = document.getElementById("heatmap");
+            const colors = [
+                "bg-[#F1F5F9]",
+                "bg-[#DCFCE7]",
+                "bg-[#BBF7D0]",
+                "bg-[#86EFAC]",
+                "bg-[#4ADE80]",
+            ];
+
+            const totalBlocks = 140;
+            const today = new Date();
+
+            for (let i = 0; i < totalBlocks; i++) {
+                const wrapper = document.createElement("div");
+                // 核心修改：去除了无意义的 overflow-visible，增加了 hover:z-30 确保悬浮块的层叠级别升到最高
+                wrapper.className = "relative group animate-cell-in hover:z-30";
+                wrapper.style.animationDelay = `${TIMELINE_START + i * 4}ms`;
+
+                const block = document.createElement("div");
+                block.className = `w-[13px] h-[13px] rounded-[2.5px] transition-all duration-150 hover:scale-110 cursor-pointer`;
+
+                const dateOffset = totalBlocks - 1 - i;
+                const targetDate = new Date(today);
+                targetDate.setDate(today.getDate() - dateOffset);
+                const dateString = targetDate.toISOString().split("T")[0];
+
+                const rand = Math.random();
+                let colorClass = colors[0];
+                let count = 0;
+
+                if (rand > 0.95) {
+                    colorClass = colors[4];
+                    count = Math.floor(Math.random() * 3) + 8;
+                } else if (rand > 0.8) {
+                    colorClass = colors[3];
+                    count = Math.floor(Math.random() * 3) + 5;
+                } else if (rand > 0.5) {
+                    colorClass = colors[2];
+                    count = Math.floor(Math.random() * 3) + 2;
+                } else if (rand > 0.2) {
+                    colorClass = colors[1];
+                    count = 1;
+                }
+
+                block.classList.add(colorClass);
+
+                const tooltip = document.createElement("div");
+                // 核心优化：使用了更高的 shadow-xl 避免视觉扁平，确保 z-50 保持最高层级显现
+                tooltip.className = `absolute hidden group-hover:block bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-white text-slate-800 border border-slate-100 rounded-lg shadow-xl text-[11px] font-medium whitespace-nowrap z-50 pointer-events-none select-none`;
+
+                if (count === 0) {
+                    tooltip.innerHTML = `<span class="text-slate-400">No contributions on</span> <span class="font-semibold text-slate-600">${dateString}</span>`;
+                } else {
+                    tooltip.innerHTML = `<span class="font-bold text-slate-900">${count} ${count === 1 ? "commit" : "commits"}</span> <span class="text-slate-400">on</span> <span class="font-semibold text-slate-600">${dateString}</span>`;
+                }
+
+                wrapper.appendChild(block);
+                wrapper.appendChild(tooltip);
+                heatmap.appendChild(wrapper);
+            }
+
+            // ----------------------------------------------------
+            // 2. 核心联动主时间轴：大数字缓动计数器 + 圆环同步
+            // ----------------------------------------------------
+            const targetEarnings = 128;
+            const counterElement = document.getElementById("earningsCounter");
+            const progressCircle = document.getElementById("progressCircle");
+
+            const duration = 1600;
+            let startTime = null;
+
+            function easeOutQuart(x) {
+                return 1 - Math.pow(1 - x, 4);
+            }
+
+            function animate(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const elapsed = timestamp - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+
+                const easedProgress = easeOutQuart(progress);
+                const currentValue = Math.floor(easedProgress * targetEarnings);
+
+                counterElement.textContent = currentValue;
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                }
+            }
+
+            // 延迟主轴节点统一启动
+            setTimeout(() => {
+                requestAnimationFrame(animate);
+                progressCircle.setAttribute("stroke-dasharray", "75, 100");
+            }, TIMELINE_START);
+
+            // ----------------------------------------------------
+            // 3. 后台收益呼吸微增逻辑
+            // ----------------------------------------------------
+            const totalCoinsElement = document.getElementById("totalCoins");
+            let currentCoins = 14250.0;
+
+            setInterval(() => {
+                const previousInteger = Math.floor(currentCoins);
+                currentCoins += 0.12;
+                const currentInteger = Math.floor(currentCoins);
+
+                if (currentInteger > previousInteger) {
+                    totalCoinsElement.textContent =
+                        currentInteger.toLocaleString("en-US");
+                }
+            }, 1000);
+        </script>
+    </body>
+</html>

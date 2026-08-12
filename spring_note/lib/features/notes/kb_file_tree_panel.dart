@@ -5,6 +5,8 @@
 /// 回调：onOpenFile(path) —— 由宿主决定如何打开（md 用便签编辑器，xlsx 用表格）
 library;
 
+import 'dart:async';
+
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:spring_note/core/services/sidecar_client.dart';
@@ -188,6 +190,9 @@ class _KbFileTreePanelState extends State<KbFileTreePanel> {
   bool _loading = true;
   String? _error;
 
+  // 重试定时器（dispose 时取消，避免测试/销毁后残留 pending timer）
+  Timer? _retryTimer;
+
   // 目录
   List<Map<String, dynamic>> _dirs = [];
   String _currentRoot = ''; // 相对数据目录路径或绝对路径
@@ -226,6 +231,7 @@ class _KbFileTreePanelState extends State<KbFileTreePanel> {
       // sidecar 首次启动需要几秒，自动重试（最多 ~8s）
       var lastError = '初始化失败';
       for (var attempt = 0; attempt < 6; attempt++) {
+        if (!mounted) return;
         try {
           final dirsResp = await _dataSource!.dirs();
           _dirs = (dirsResp['dirs'] as List? ?? []).cast<Map<String, dynamic>>();
@@ -238,16 +244,30 @@ class _KbFileTreePanelState extends State<KbFileTreePanel> {
         } catch (e) {
           lastError = e.toString();
           if (attempt < 5) {
-            await Future<void>.delayed(const Duration(milliseconds: 1500));
+            // 用可取消 Timer 替代 Future.delayed：组件销毁时立即停止重试，
+            // 避免测试/退出后残留 pending timer（flutter_test 会断言 !timersPending）。
+            final completer = Completer<void>();
+            _retryTimer?.cancel();
+            _retryTimer = Timer(const Duration(milliseconds: 1500), () {
+              if (!completer.isCompleted) completer.complete();
+            });
+            await completer.future;
           }
         }
       }
-      if (lastError.isNotEmpty) _error = lastError;
+      if (lastError.isNotEmpty && mounted) _error = lastError;
     } catch (e) {
-      _error = e.toString();
+      if (mounted) _error = e.toString();
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  @override
+  void dispose() {
+    _retryTimer?.cancel();
+    _retryTimer = null;
+    super.dispose();
   }
 
   Future<void> _loadTree() async {

@@ -1,182 +1,136 @@
-<!-- We've seen that note-taking tools usually just store text.
-But XiaoYuNote treats notes as something that grows over time.
-Instead of static records, we model a living system:
-  .     *   .       .        o        .       *     .   .
-    .   .      |     .    .        .     .     *   .     .
-       --o--           XiaoYuNote           .      |   .
-    *    |      .   capture → organize → reflect → grow
- .    .     .     .        .        .     .   --*--   .
-      .        *      .        .     .        |     .  .
-(ASCII art depicting scattered thoughts converging into XiaoYuNote) -->
-
-<h1 align="center">
-  <img src="./snapshots/logo.png" width="48" alt="XiaoYuNote Logo" style="vertical-align: -6px;">
-  XiaoYuNote
-</h1>
+# XiaoYuNote
 
 <div align="center">
 <div>
-<a href="https://qm.qq.com/q/c6QiowtYSA"><img src="https://img.shields.io/badge/Group-170%20ONLINE-c9dce8?style=flat-square&labelColor=263a36&logo=qq&logoColor=white"></a>
 <img src="https://img.shields.io/badge/Flutter-3.x-d7e8e4?style=flat-square&labelColor=263a36&logo=flutter">
 <img src="https://img.shields.io/badge/Rust-2024-e8dfd8?style=flat-square&labelColor=263a36&logo=rust">
+<img src="https://img.shields.io/badge/Python-3.11-e8dfd8?style=flat-square&labelColor=263a36&logo=python">
+<img src="https://img.shields.io/badge/Platform-Windows%20%7C%20macOS-f2e8e5?style=flat-square&labelColor=263a36">
 <img src="https://img.shields.io/badge/License-AGPL--3.0-f2e8e5?style=flat-square&labelColor=5b403a">
 </div>
 </div>
 
-## 为什么选择XiaoYuNote
+## 项目简介
 
-市面上的便签软件大多只能帮你保存内容，却很难帮你利用这些内容。XiaoYuNote 因此而生。它不仅能够记录，更能够帮助你整理、沉淀和回顾。通过 AI 自动生成日报、周报和月报，并结合回忆书功能，让过去的记录变成随时可检索、可对话的个人知识资产。
+XiaoYuNote 是一个**本地优先**的 AI 便签与个人知识库工作台。
 
+市面上的便签工具大多只能帮你保存内容，却很难帮你利用这些内容。XiaoYuNote 把「记录」和「利用记录」打通：日报、周报、月报随手记；本地文件自动索引成可检索的个人知识库；xlsx 表格就地编辑、保存即入库；回忆书随时对话，让过去的记录变成可检索、可追问的知识资产。
+
+一句话概括：**边记、边问、边算。**
 
 ## 核心功能
 
-- **首页工作台**：牛马等级、收益、活跃热力图、快速输入框和今日摘要卡片。
+| 功能模块 | 说明 |
+| --- | --- |
+| **首页工作台** | 快速输入框、今日摘要卡片、活跃热力图，以及知识库状态卡片（已索引文件数 / 待索引 / 最近入库） |
+| **便签编辑** | 日报 / 周报 / 月报，Markdown 三栏编辑，实时预览、代码高亮、AI 补全（FIM）与 AI 自动整理 |
+| **边写边问** | 笔记中选中文本，右键「问知识库」，答案直接回到编辑器上下文 |
+| **回忆书对话** | 以对话方式检索和整理记忆，展示思考过程与工具调用；开启知识库模式后走本地 RAG（向量 + 精确值）检索 |
+| **知识库面板** | 数据目录文件树（笔记区 + 业务区）、索引状态、SSE 流式问答，来源引用可点击跳转文件 |
+| **表格编辑** | 内嵌 Univer 的 xlsx 编辑器（WebView2）：新建 / 打开 / 编辑，支持多 sheet、公式、样式与 CSV 导入导出 |
+| **表格感知问答** | 对 xlsx 建立精确值索引，单号、金额等精确命中，回答带单元格级引用（如 `对账清单.xlsx!Sheet1 A3:B7`） |
+| **自动报告生成** | 启动时自动补齐缺失的周报 / 月报，基于已有日报 / 周报生成总结 |
+| **牛马时钟** | 桌面组件，自定义日薪与工作时长，自动计算时薪并实时展示 |
+| **桌面端体验** | 自定义 Windows 标题栏、托盘、开机自启、全局快捷键、桌面状态组件、深色模式与壁纸 |
+| **多语言** | 界面支持中 / 英文切换 |
 
-  ![XiaoYuNote 首页](./snapshots/index.png)
+## 技术架构
 
-- **AI 智能生成**：在首页快速输入想法，由 AI 自动整理为结构化内容。
+```
+┌──────────────────────────────────────────────────────────────┐
+│ Flutter + Rust 桌面应用（Windows / macOS）                     │
+│   首页工作台 · 便签 · 回忆书 · 知识库面板 · 表格编辑 · 桌面组件  │
+└──────────────────────────┬───────────────────────────────────┘
+                           │ HTTP / SSE（仅 127.0.0.1 + token 握手）
+┌──────────────────────────▼───────────────────────────────────┐
+│ Python sidecar（FastAPI，随应用自动启停）                      │
+│   /api/ask    SSE 流式问答（向量 + 精确值检索）                 │
+│   /api/index  watchdog 监听，文件变更增量入库                  │
+│   /api/sheets 表格精确值检索通道                               │
+│   /api/files  目录树与 md / xlsx 文件读写                      │
+│   /api/stats /api/config /api/health                          │
+└──────────────────────────┬───────────────────────────────────┘
+                           │
+┌──────────────────────────▼───────────────────────────────────┐
+│ 本地数据目录                                                  │
+│   notes/   日报 · 周报 · 月报 · 图片（Markdown 为主存储）       │
+│   业务/    md / docx / pdf / xlsx 等业务文件                   │
+│   kb.sqlite3  向量库 + 精确值索引（增量去重）                   │
+└──────────────────────────────────────────────────────────────┘
+```
 
-- **便签编辑**：支持日报、周报、月报等记录类型，提供 Markdown 编辑、预览、代码块高亮和 AI 补全预测。
+## 本地优先与隐私安全
 
-  ![XiaoYuNote 便签](./snapshots/note.png)
-
-- **回忆书对话**：以对话方式检索和整理记忆内容，支持思考过程、工具调用展示与 Markdown 渲染。
-
-  ![XiaoYuNote 回忆书](./snapshots/memories.png)
-
-- **自动报告生成**：启动时可按日期补齐缺失的周报/月报，基于已有日报或周报生成总结。
-
-- **统计面板**：查看记录、活跃度、模型调用和时间范围内的数据概览。
-
-  ![XiaoYuNote 统计面板](./snapshots/setting.png)
-
-- **牛马时钟**：支持自定义日薪和工作时长,自动计算时薪并作为组件展示在页面上。
-
-  ![XiaoYuNote 组件](./snapshots/components.png)
-
-- **桌面端极致体验**：支持自定义 Windows 标题栏、托盘、开机自启动、全局快捷键、桌面状态组件和系统字体切换。
+- **数据全在本地**：记录、图片、业务文件与知识库索引都保存在你指定的数据目录，不强制上传。
+- **仅回环访问**：sidecar 只绑定 `127.0.0.1`，并带随机 token 握手，防止本机其他进程调用。
+- **三道安全防线**：入库前脱敏 / 敏感文件跳过 → 检索排除 → 输出扫描。
+- **密钥本地保存**：AI 密钥配置仅存本地，不外泄。
 
 ## 快速开始
 
 ### 下载安装
 
-#### 通过 GitHub 下载
-
-请前往 [Release 页](https://github.com/Radiant303/XiaoYuNote/releases/latest) 下载XiaoYuNote
+前往 [Release 页](https://github.com/ZYQIHUI/XiaoYuNote/releases/latest) 下载最新版 XiaoYuNote。
 
 ### 第一步：确认数据位置
 
-首次使用时先确认数据保存目录。日报、周报、月报、图片和相关配置都会围绕这个目录保存；
+首次使用先确认数据保存目录。日报、周报、月报、图片、业务表格和知识库索引（`kb.sqlite3`）都会围绕这个目录保存：
 
-![数据目录](./snapshots/datadir.png)
-
+```
+数据目录/
+├── notes/            # 日报 / 周报 / 月报 / 图片
+├── 业务/             # md / docx / pdf / xlsx 业务文件
+├── config.json       # 应用配置
+└── kb.sqlite3        # 知识库索引（sidecar 自动维护）
+```
 
 ### 第二步：配置 AI
 
+以 **DeepSeek** 为例，四步完成配置：
 
-以 **DeepSeek** 为例进行配置说明：
-
-#### ① 添加供应商 BaseURL请填写 https://api.deepseek.com/beta
-
-
->
-> 此处填写`beta`原因是Deepseek的[FIM接口要求](https://api-docs.deepseek.com/zh-cn/guides/fim_completion)
->
->其他的OpenAI兼容接口请依据实际情况填写
->
-
-![第一步](./snapshots/configone.png)
-
-#### ② 手动添加模型 deepseek-v4-flash
-
->
->因为Deepseek的`beta`接口不支持模型列表查询，所以需要手动添加模型
->
-
-![第二步](./snapshots/configtwo.png)
-
-#### ③ 编辑模型
-
->
->请手动勾选补全类型
->
-
-![第三步](./snapshots/configthree.png)
-
-#### ④ 选择默认模型
-
->
->如果你的模型不支持补全类型，则在编辑补全模型列表中不会出现该模型
->
-
-![第四步](./snapshots/configfour.png)
+| 步骤 | 操作 | 说明 |
+| --- | --- | --- |
+| ① 添加供应商 | BaseURL 填写 `https://api.deepseek.com/beta` | DeepSeek 的 [FIM 接口](https://api-docs.deepseek.com/zh-cn/guides/fim_completion)要求走 `beta`；其他 OpenAI 兼容接口请按实际情况填写 |
+| ② 手动添加模型 | 添加模型 `deepseek-v4-flash` | `beta` 接口不支持模型列表查询，需要手动添加 |
+| ③ 编辑模型 | 勾选「补全」类型 | 用于编辑预测 / FIM 补全 |
+| ④ 选择默认模型 | 将新添加的模型设为默认 | 若模型不支持补全类型，则补全模型列表中不会出现该模型 |
 
 ### 第三步：完成第一次记录
 
-![首页](./snapshots/index.png)
-
+在首页快速输入框写下当前的想法，点击生成；或在便签页新建一篇日报，开始记录今天的工作。
 
 ### 第四步：在笔记本中查看和编辑
 
-![笔记本](./snapshots/note.png)
-
-笔记本搜索只搜索当前选择的日报、周报或月报类型。搜索至少输入两个字符，点击结果后可以打开对应的完整正文。
+笔记本搜索只搜索当前选择的日报、周报或月报类型；搜索至少输入两个字符，点击结果即可打开对应的完整正文。
 
 ### 第五步：使用回忆书
 
-![回忆书](./snapshots/memories.png)
+进入「回忆书」后，可以直接询问已经保存的工作记录。开启知识库模式后，回答由本地 RAG（向量 + 精确值）检索生成，并附来源引用。
 
-进入“回忆书”后，可以直接询问已经保存的工作记录。
+### 第六步：使用知识库与表格
 
-### 第六步：使用牛马时钟
+- **知识库面板**：查看数据目录文件树与索引状态，发起流式问答，点击引用跳转到对应文件。
+- **表格编辑**：新建或打开 xlsx，编辑完成后保存，sidecar 的 watchdog 会自动增量索引；随后即可针对表格内容提问（如「上个月对账清单里 XX 单号金额是多少」）。
 
-![牛马时钟](./snapshots/components.png)
+### 第七步：使用牛马时钟
 
-组件用于查看当前计时、当天工作时长和收益，并在主窗口之外控制计时。
+桌面组件用于查看当前计时、当天工作时长和收益，并在主窗口之外控制计时：
 
-- 左键单击组件：开始或暂停计时；
-- 右键单击组件：打开主窗口并进入首页；
-- 左键拖动组件：移动窗口位置；
+| 操作 | 效果 |
+| --- | --- |
+| 左键单击 | 开始或暂停计时 |
+| 右键单击 | 打开主窗口并进入首页 |
+| 左键拖动 | 移动组件位置 |
 
-### 继续探索
+## 测试与质量
 
-完成基本记录后，可以在设置中继续配置。更多使用说明请查看 [文档](https://radiant303.github.io/XiaoYuNote/)
+- Flutter 端 290+ 项自动化测试
+- sidecar 90 余项自动化测试（mock LLM，不依赖外部 API）
 
-## 🌍 社区
+## 致谢
 
-无论你是在使用过程中遇到问题，还是有新的想法与建议，都欢迎与我们交流。
+XiaoYuNote 基于 [Radiant303/SpringNote](https://github.com/Radiant303/SpringNote) 二次开发，感谢上游项目与所有贡献者。
 
-我们会认真聆听每一条反馈，持续优化 XiaoYuNote，让它变得更好。
+## 开源许可
 
-**加入 [XiaoYuNote 官方交流群](https://qm.qq.com/q/c6QiowtYSA)，一起交流使用体验、分享想法。**
-
->QQ群号：**463423961**
-
->[!TIP]
->反馈问题时，请同时提供：
->- 当前版本号
->- 操作步骤
->- 是否能够稳定复现
->- 相关截图或错误信息
->
->这些信息可以帮助快速定位问题。
-
-
-## ❤️ Special Thanks
-
-特别感谢所有 Contributors和社区成员对 XiaoYuNote 的支持 ❤️
-
-<a href="https://github.com/Radiant303/XiaoYuNote/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=Radiant303/XiaoYuNote&max=300&columns=15" />
-</a>
-
-## ⭐ Star History
-
-> [!TIP]
-> 如果本项目对您的生活 / 工作产生了帮助，或者您关注本项目的未来发展，请给项目 Star，这是我们维护这个开源项目的动力 <3
-
-<p align="center">
-  <img src="https://count.getloli.com/@XiaoYuNote?name=XiaoYuNote&theme=miku&padding=7&offset=0&align=center&scale=0.3&pixelated=1&darkmode=auto" alt="visitor count" />
-</p>
-
-[![Star History Chart](https://api.star-history.com/chart?repos=Radiant303/XiaoYuNote&type=date&legend=top-left&sealed_token=GD4g7Mlo0LVV9WahCTkgmdeB4LneMiVy1HvOlv59QgOYv9GbY7C2yT5b4TK0fvbgxLJLKR7jglKhMek04iRyeh6_NkURNIkQrpqVqGe9KQKBbm6StCexBQ)](https://www.star-history.com/?repos=Radiant303%2FXiaoYuNote&type=date&legend=top-left)
+本项目以 **AGPL-3.0** 协议开源（fork 自 Radiant303/SpringNote，协议继承），详见 [LICENSE](./LICENSE) 与文件头版权声明。

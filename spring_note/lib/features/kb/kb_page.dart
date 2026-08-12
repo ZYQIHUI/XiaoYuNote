@@ -111,6 +111,9 @@ class _KbPageState extends State<KbPage> {
   String? _error;
   bool _loading = true;
 
+  // 重试定时器（dispose 时取消，避免测试/销毁后残留 pending timer）
+  Timer? _retryTimer;
+
   Map<String, dynamic>? _health;
   Map<String, dynamic>? _stats;
   Map<String, dynamic>? _config;
@@ -131,6 +134,8 @@ class _KbPageState extends State<KbPage> {
 
   @override
   void dispose() {
+    _retryTimer?.cancel();
+    _retryTimer = null;
     _askSub?.cancel();
     _queryController.dispose();
     super.dispose();
@@ -146,6 +151,7 @@ class _KbPageState extends State<KbPage> {
       // sidecar 首次启动需要几秒，自动重试（最多 ~8s），避免必须手动点重试
       var lastError = '初始化失败';
       for (var attempt = 0; attempt < 6; attempt++) {
+        if (!mounted) return;
         try {
           await _refreshAll();
           lastError = '';
@@ -153,15 +159,22 @@ class _KbPageState extends State<KbPage> {
         } catch (e) {
           lastError = e.toString();
           if (attempt < 5) {
-            await Future<void>.delayed(const Duration(milliseconds: 1500));
+            // 用可取消 Timer 替代 Future.delayed：组件销毁时立即停止重试，
+            // 避免测试/退出后残留 pending timer（flutter_test 会断言 !timersPending）。
+            final completer = Completer<void>();
+            _retryTimer?.cancel();
+            _retryTimer = Timer(const Duration(milliseconds: 1500), () {
+              if (!completer.isCompleted) completer.complete();
+            });
+            await completer.future;
           }
         }
       }
-      if (lastError.isNotEmpty) {
+      if (lastError.isNotEmpty && mounted) {
         _error = lastError;
       }
     } catch (e) {
-      _error = e.toString();
+      if (mounted) _error = e.toString();
     } finally {
       if (mounted) setState(() => _loading = false);
     }

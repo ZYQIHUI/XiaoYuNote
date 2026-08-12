@@ -116,7 +116,7 @@ final value = 1;
     expect(editorAfter.controller?.text, contains('E = mc'));
     expect(editorAfter.controller?.text, contains('final value = 1'));
     expect(
-      noteService.contents['D:\\Temp\\XiaoYuNote\\notes\\daily\\2026-06-18.md'],
+      noteService.contents[_normPath('D:\\Temp\\XiaoYuNote\\notes\\daily\\2026-06-18.md')],
       edited,
     );
     // 让编辑器自动保存与异步任务完成
@@ -428,8 +428,8 @@ final value = 1;
 
     expect(cloudSyncApi.uploadCalls, 1);
     expect(
-      cloudSyncApi.uploadRequests.single.notePath,
-      'D:\\Temp\\XiaoYuNote\\notes\\daily\\2026-06-18.md',
+      _normPath(cloudSyncApi.uploadRequests.single.notePath),
+      _normPath('D:\\Temp\\XiaoYuNote\\notes\\daily\\2026-06-18.md'),
     );
 
     await tester.pump(const Duration(seconds: 3));
@@ -488,7 +488,7 @@ final value = 1;
     await tester.pump();
 
     expect(cloudSyncApi.uploadCalls, 1);
-    expect(cloudSyncApi.uploadRequests.single.notePath, notePath);
+    expect(_normPath(cloudSyncApi.uploadRequests.single.notePath), _normPath(notePath));
 
     await tester.pump(const Duration(seconds: 3));
     await tester.pump();
@@ -990,16 +990,16 @@ final value = 1;
       await tester.pump();
 
       expect(
-        pastedImageService.notePath,
-        'E:\\XiaoYuNoteData\\notes\\daily\\2026-06-18.md',
+        _normPath(pastedImageService.notePath ?? ''),
+        _normPath('E:\\XiaoYuNoteData\\notes\\daily\\2026-06-18.md'),
       );
       expect(
-        noteService.contents['E:\\XiaoYuNoteData\\notes\\daily\\2026-06-18.md'],
+        noteService.contents[_normPath('E:\\XiaoYuNoteData\\notes\\daily\\2026-06-18.md')],
         contains('![screenshot.png](../images/screenshot.png)'),
       );
       expect(
         noteService
-            .contents['D:\\Temp\\XiaoYuNote\\notes\\daily\\2026-06-18.md'],
+            .contents[_normPath('D:\\Temp\\XiaoYuNote\\notes\\daily\\2026-06-18.md')],
         '# 旧目录\n',
       );
     },
@@ -1202,7 +1202,7 @@ final value = 1;
     });
     final aiService = _FakeRegenerateAiClientService()
       ..beforeReturn = () {
-        noteService.contents[notePath] = '# 2026-06-18 日报\n\n重新生成后的正文';
+        noteService.contents[_normPath(notePath)] = '# 2026-06-18 日报\n\n重新生成后的正文';
       };
 
     await tester.pumpWidget(
@@ -1232,7 +1232,7 @@ final value = 1;
 
     expect(aiService.calls, 1);
     expect(aiService.lastKind, NoteKind.daily);
-    expect(aiService.lastTargetPath, notePath);
+    expect(_normPath(aiService.lastTargetPath!), _normPath(notePath));
     expect(
       aiService.lastDailyNotesDirectory,
       _localDataState.dailyNotesDirectory,
@@ -1300,7 +1300,7 @@ final value = 1;
       );
 
       aiService.beforeReturn = () {
-        noteService.contents[notePath] = '# 2026-06-18 日报\n\n重新生成后的正文';
+        noteService.contents[_normPath(notePath)] = '# 2026-06-18 日报\n\n重新生成后的正文';
       };
       gate.complete(
         const ReportRegenerationResult(
@@ -1359,13 +1359,18 @@ final value = 1;
     expect(aiService.calls, 1);
     expect(find.text('重新生成失败：该周没有可用的日报内容。'), findsOneWidget);
     expect(_editablePlainText(tester), contains('初始内容'));
-    expect(noteService.contents[notePath], '# 2026-06-18 日报\n\n- 初始内容');
+    expect(noteService.contents[_normPath(notePath)], '# 2026-06-18 日报\n\n- 初始内容');
   });
 }
 
 String _editablePlainText(WidgetTester tester) {
   return _editableTextSpan(tester).toPlainText();
 }
+
+/// 路径归一化：`\` → `/`，使测试在 Windows 与 Linux（CI）上行为一致。
+/// 产品代码用 Platform.pathSeparator 拼接路径（各平台正确），
+/// 测试 mock/断言不应依赖特定平台分隔符。
+String _normPath(String p) => p.replaceAll('\\', '/');
 
 TextSpan _editableTextSpan(WidgetTester tester) {
   final finder = find.byType(EditableText).last;
@@ -1490,8 +1495,13 @@ class _MemoryLocalDataService extends LocalDataService {
 }
 
 class _MemoryNoteService extends NoteService {
-  _MemoryNoteService(this.contents);
+  _MemoryNoteService(Map<String, String> rawContents)
+    : contents = {
+        for (final entry in rawContents.entries)
+          _normPath(entry.key): entry.value,
+      };
 
+  /// path（归一化后）→ content（md/txt）
   final Map<String, String> contents;
 
   @override
@@ -1499,9 +1509,10 @@ class _MemoryNoteService extends NoteService {
     required String directoryPath,
     required NoteKind kind,
   }) async {
+    final dir = _normPath(directoryPath);
     final files =
         contents.entries
-            .where((entry) => entry.key.startsWith(directoryPath))
+            .where((entry) => entry.key.startsWith(dir))
             .map((entry) => _noteFile(entry.key, entry.value, kind))
             .toList()
           ..sort((a, b) => b.name.compareTo(a.name));
@@ -1519,23 +1530,23 @@ class _MemoryNoteService extends NoteService {
       NoteKind.weekly => '2026-W25.md',
       NoteKind.monthly => '2026-06.md',
     };
-    final path = '$directoryPath\\$name';
+    final path = '${_normPath(directoryPath)}/$name';
     contents.putIfAbsent(path, () => '# ${kind.label}\n');
     return _noteFile(path, contents[path]!, kind);
   }
 
   @override
   Future<String> readMarkdown(String path) async {
-    return contents[path] ?? '';
+    return contents[_normPath(path)] ?? '';
   }
 
   @override
   Future<void> writeMarkdown(String path, String content) async {
-    contents[path] = content;
+    contents[_normPath(path)] = content;
   }
 
   NoteFile _noteFile(String path, String content, NoteKind kind) {
-    final name = path.split('\\').last;
+    final name = path.split(RegExp(r'[\\/]')).last;
     final title = content
         .split('\n')
         .firstWhere((line) => line.trim().isNotEmpty, orElse: () => name)

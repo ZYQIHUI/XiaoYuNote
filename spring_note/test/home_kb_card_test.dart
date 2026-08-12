@@ -1,3 +1,5 @@
+library;
+
 /// HomePage 知识库状态卡片测试 — 注入 FakeKbDataSource，
 /// 验证状态文案、未连接态与索引/跳转回调。
 

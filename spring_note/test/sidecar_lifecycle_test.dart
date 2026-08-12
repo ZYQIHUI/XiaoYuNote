@@ -1,3 +1,5 @@
+library;
+
 /// SidecarLifecycle 测试 — 已有实例复用、目录解析、stop 幂等。
 /// （spawn 真实进程路径不在此测试，避免依赖本机 Python/服务）
 

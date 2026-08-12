@@ -1,3 +1,5 @@
+library;
+
 /// 边写边问 KbAskDialog 测试 — 注入 FakeKbDataSource（无网络），
 /// 验证 SSE 流式渲染、引用展示与「插入到编辑器」。
 

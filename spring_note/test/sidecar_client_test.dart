@@ -1,3 +1,5 @@
+library;
+
 /// SidecarClient 单元测试 — 用 dart:io HttpServer mock 侧车，
 /// 验证 token 头、SSE 事件流解析、错误处理与连接加载。
 

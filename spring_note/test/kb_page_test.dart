@@ -1,3 +1,5 @@
+library;
+
 /// KbPage widget 测试 — 注入内存 FakeKbDataSource（无网络），
 /// 验证文件树渲染、状态栏、SSE 流式问答与引用展示。
 

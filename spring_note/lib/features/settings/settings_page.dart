@@ -56,7 +56,7 @@ enum _SettingsNavIconType {
 }
 
 class SettingsPage extends StatefulWidget {
-  SettingsPage({
+  const SettingsPage({
     super.key,
     required this.localDataState,
     this.localDataService = const LocalDataService(),

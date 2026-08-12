@@ -3,11 +3,8 @@
 //! Flutter 端通过 flutter_rust_bridge 调用这些函数，替代原 Python sidecar。
 
 use super::chunker::{self, ChunkConfig};
-use super::embedder::EmbedConfig;
 use super::exact;
-use super::generator;
 use super::parser;
-use super::retriever::{self, RetrievalConfig};
 use super::scanner::{self, ScanConfig};
 use super::store::{self, ChunkRecord};
 use std::path::{Path, PathBuf};

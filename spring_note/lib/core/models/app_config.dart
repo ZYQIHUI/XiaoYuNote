@@ -164,6 +164,7 @@ class AppConfig {
     required this.notesEditorWorkspaceMode,
     required this.themeMode,
     required this.customDataDirectory,
+    required this.kbDataDir,
     required this.autoStart,
     required this.showUpdates,
     required this.showDesktopWidget,
@@ -204,6 +205,10 @@ class AppConfig {
   final String notesEditorWorkspaceMode;
   final AppThemePreference themeMode;
   final String? customDataDirectory;
+
+  /// 知识库（sidecar）数据目录；null = 跟随数据目录（customDataDirectory）。
+  /// 知识库索引 kb.sqlite3、业务文件区与 notes 都位于该目录。
+  final String? kbDataDir;
   final bool autoStart;
   final bool showUpdates;
   final bool showDesktopWidget;
@@ -257,6 +262,7 @@ class AppConfig {
       notesEditorWorkspaceMode: 'split',
       themeMode: AppThemePreference.system,
       customDataDirectory: null,
+      kbDataDir: null,
       autoStart: false,
       showUpdates: true,
       showDesktopWidget: true,
@@ -309,6 +315,7 @@ class AppConfig {
       ),
       themeMode: _readThemePreference(json['themeMode']),
       customDataDirectory: _readOptionalString(json['customDataDirectory']),
+      kbDataDir: _readOptionalString(json['kbDataDir']),
       autoStart: json['autoStart'] as bool? ?? false,
       showUpdates: json['showUpdates'] as bool? ?? true,
       showDesktopWidget: json['showDesktopWidget'] as bool? ?? true,
@@ -389,6 +396,7 @@ class AppConfig {
       'notesEditorWorkspaceMode': notesEditorWorkspaceMode,
       'themeMode': themeMode.name,
       'customDataDirectory': customDataDirectory,
+      'kbDataDir': kbDataDir,
       'autoStart': autoStart,
       'showUpdates': showUpdates,
       'showDesktopWidget': showDesktopWidget,
@@ -430,6 +438,7 @@ class AppConfig {
     String? notesEditorWorkspaceMode,
     AppThemePreference? themeMode,
     Object? customDataDirectory = _sentinel,
+    Object? kbDataDir = _sentinel,
     bool? autoStart,
     bool? showUpdates,
     bool? showDesktopWidget,
@@ -474,6 +483,7 @@ class AppConfig {
       customDataDirectory: customDataDirectory == _sentinel
           ? this.customDataDirectory
           : customDataDirectory as String?,
+      kbDataDir: kbDataDir == _sentinel ? this.kbDataDir : kbDataDir as String?,
       autoStart: autoStart ?? this.autoStart,
       showUpdates: showUpdates ?? this.showUpdates,
       showDesktopWidget: showDesktopWidget ?? this.showDesktopWidget,

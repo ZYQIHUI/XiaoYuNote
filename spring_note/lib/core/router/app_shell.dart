@@ -105,6 +105,9 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   DateTime? _lastUpdateCheckAttemptAt;
   String? _startupCloudSyncMessage;
 
+  /// 知识库引用跳转：请求便签页打开的文件路径（每次跳转生成唯一值触发 didUpdateWidget）。
+  String? _openKbFileRequest;
+
   @override
   void initState() {
     super.initState();
@@ -235,6 +238,15 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       return;
     }
     setState(() => _section = section);
+  }
+
+  /// 知识库引用点击：切到便签页并请求打开文件。
+  void _openKbFileInNotes(String path) {
+    setState(() {
+      // 用时间戳保证每次跳转 openKbFileRequest 都变化（触发 NotesPage.didUpdateWidget）
+      _openKbFileRequest = '$path#${DateTime.now().microsecondsSinceEpoch}';
+      _section = AppSection.notes;
+    });
   }
 
   void _handleLevelProgressChanged() {
@@ -688,9 +700,12 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
                               );
                               _handleLocalDataStateChanged(state);
                             },
+                            openKbFileRequest: _openKbFileRequest,
                           ),
                           MemoryPage(localDataState: _localDataState),
-                          const KbPage(),
+                          KbPage(
+                            onOpenFileInNotes: _openKbFileInNotes,
+                          ),
                           SettingsPage(
                             localDataState: _localDataState,
                             updateCheckService: widget.updateCheckService,

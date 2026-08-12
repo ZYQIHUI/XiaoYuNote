@@ -45,8 +45,14 @@ class SidecarClient {
 
   bool get isConfigured => _token != null && _token!.isNotEmpty;
 
-  /// 数据目录：环境变量 XIAOYU_DATA_DIR > %APPDATA%\XiaoYu。
+  /// 由 SidecarLifecycle 在启动 sidecar 时设置（知识库数据目录），
+  /// 保证 Flutter 读取的 .sidecar.json 与 sidecar 实际写入的一致。
+  static String? configuredDataDir;
+
+  /// 数据目录：configuredDataDir > 环境变量 XIAOYU_DATA_DIR > %APPDATA%\XiaoYu。
   static String defaultDataDir() {
+    final configured = configuredDataDir;
+    if (configured != null && configured.isNotEmpty) return configured;
     final env = Platform.environment['XIAOYU_DATA_DIR'];
     if (env != null && env.isNotEmpty) return env;
     final appData = Platform.environment['APPDATA'];
@@ -70,6 +76,9 @@ class SidecarClient {
     final q = query == null ? '' : '?${Uri(queryParameters: query).query}';
     return Uri.parse('http://$_host:$_port$path$q');
   }
+
+  /// sidecar base URL（http://host:port），供 WebView 加载本地静态资源。
+  String get baseUrl => 'http://$_host:$_port';
 
   Map<String, String> get _headers => {'X-Token': _token ?? ''};
 
@@ -117,6 +126,13 @@ class SidecarClient {
 
   Future<Map<String, dynamic>> filesTree() => _getJson('/api/files/tree');
 
+  /// 可浏览的根目录列表。
+  Future<Map<String, dynamic>> dirs() => _getJson('/api/dirs');
+
+  /// 以指定根目录生成文件树（root 为空 = 数据目录根）。
+  Future<Map<String, dynamic>> filesTreeRoot(String root) =>
+      _getJson('/api/files/tree/root', {'root': root});
+
   Future<String> readText(String path) async {
     final r = await _getJson('/api/files', {'path': path});
     return r['content'] as String? ?? '';
@@ -133,10 +149,30 @@ class SidecarClient {
   Future<Map<String, dynamic>> writeXlsx(String path, String base64) =>
       _postJson('/api/files/xlsx', {'path': path, 'content_base64': base64});
 
+  /// 新建文件（md/txt 带 content；xlsx 带可选 content_base64）。
+  Future<Map<String, dynamic>> createFile(String path, {String content = '', String? contentBase64}) =>
+      _postJson('/api/files/create', {
+        'path': path,
+        'content': content,
+        'content_base64': ?contentBase64,
+      });
+
+  /// 新建文件夹。
+  Future<Map<String, dynamic>> createDir(String path) =>
+      _postJson('/api/files/mkdir', {'path': path});
+
+  /// 删除文件或文件夹（文件夹递归删除）。
+  Future<Map<String, dynamic>> deletePath(String path) =>
+      _postJson('/api/files/delete', {'path': path});
+
   Future<Map<String, dynamic>> index({bool rebuild = false}) =>
       _postJson('/api/index', {'rebuild': rebuild});
 
   Future<Map<String, dynamic>> config() => _getJson('/api/config');
+
+  /// 更新 sidecar 配置（当前用于写入 extra_sources 知识库文件夹）。
+  Future<Map<String, dynamic>> setConfig(Map<String, dynamic> body) =>
+      _postJson('/api/config', body);
 
   /// 表格感知问答（精确值通道）。
   Future<List<Map<String, dynamic>>> sheets(String q, {String? path, int topN = 10}) async {

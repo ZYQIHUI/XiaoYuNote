@@ -8,6 +8,7 @@ library;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:spring_note/core/services/external_link_service.dart';
 import 'package:spring_note/core/services/sidecar_client.dart';
 import 'package:spring_note/features/sheets/sheet_editor_page.dart';
 import 'package:spring_note/core/theme/app_theme.dart';
@@ -28,6 +29,7 @@ abstract class KbDataSource {
   Future<Map<String, dynamic>> stats();
   Future<Map<String, dynamic>> filesTree();
   Future<Map<String, dynamic>> index();
+  Future<Map<String, dynamic>> config();
   Future<String> readText(String path);
   Stream<SidecarAskEvent> askStream(String query, {int? k, String? path});
 }
@@ -73,6 +75,12 @@ class SidecarKbDataSource implements KbDataSource {
   }
 
   @override
+  Future<Map<String, dynamic>> config() async {
+    await _ensureLoaded();
+    return _client.config();
+  }
+
+  @override
   Future<String> readText(String path) async {
     await _ensureLoaded();
     return _client.readText(path);
@@ -86,10 +94,13 @@ class SidecarKbDataSource implements KbDataSource {
 }
 
 class KbPage extends StatefulWidget {
-  const KbPage({super.key, this.dataSource});
+  const KbPage({super.key, this.dataSource, this.onOpenFileInNotes});
 
   /// 可注入的数据源（测试用）；为空时使用 sidecar 真实数据源。
   final KbDataSource? dataSource;
+
+  /// 引用点击时跳转便签页打开文件（由 app_shell 注入）。
+  final ValueChanged<String>? onOpenFileInNotes;
 
   @override
   State<KbPage> createState() => _KbPageState();
@@ -102,7 +113,7 @@ class _KbPageState extends State<KbPage> {
 
   Map<String, dynamic>? _health;
   Map<String, dynamic>? _stats;
-  Map<String, dynamic>? _tree;
+  Map<String, dynamic>? _config;
   bool _indexing = false;
 
   final List<_ChatMsg> _messages = [];
@@ -132,7 +143,23 @@ class _KbPageState extends State<KbPage> {
     });
     try {
       _dataSource = widget.dataSource ?? SidecarKbDataSource();
-      await _refreshAll();
+      // sidecar 首次启动需要几秒，自动重试（最多 ~8s），避免必须手动点重试
+      var lastError = '初始化失败';
+      for (var attempt = 0; attempt < 6; attempt++) {
+        try {
+          await _refreshAll();
+          lastError = '';
+          break;
+        } catch (e) {
+          lastError = e.toString();
+          if (attempt < 5) {
+            await Future<void>.delayed(const Duration(milliseconds: 1500));
+          }
+        }
+      }
+      if (lastError.isNotEmpty) {
+        _error = lastError;
+      }
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -145,18 +172,18 @@ class _KbPageState extends State<KbPage> {
     if (ds == null) return;
     final health = await ds.health();
     Map<String, dynamic>? stats;
-    Map<String, dynamic>? tree;
+    Map<String, dynamic>? config;
     try {
       stats = await ds.stats();
-      tree = await ds.filesTree();
+      config = await ds.config();
     } catch (_) {
-      // stats/tree 失败不阻塞整体
+      // stats/config 失败不阻塞整体
     }
     if (mounted) {
       setState(() {
         _health = health;
         _stats = stats;
-        _tree = tree;
+        _config = config;
       });
     }
   }
@@ -259,7 +286,26 @@ class _KbPageState extends State<KbPage> {
     });
   }
 
+  /// 用系统文件管理器打开知识库数据目录（data_dir 来自 sidecar health）。
+  Future<void> _openFolder() async {
+    final dataDir = _health?['data_dir'] as String?;
+    if (dataDir == null || dataDir.isEmpty) {
+      _appendStatus('无法获取知识库目录（sidecar 未连接）');
+      return;
+    }
+    final ok = await const ExternalLinkService().openFolder(dataDir);
+    if (!ok && mounted) {
+      _appendStatus('打开文件夹失败：$dataDir');
+    }
+  }
+
   Future<void> _openRef(String source) async {
+    // 优先跳转便签页打开（知识库专注问答，看文件去便签）
+    final openInNotes = widget.onOpenFileInNotes;
+    if (openInNotes != null) {
+      openInNotes(source);
+      return;
+    }
     if (source.endsWith('.xlsx') || source.endsWith('.xls')) {
       final client = SidecarClient();
       try {
@@ -317,7 +363,7 @@ class _KbPageState extends State<KbPage> {
     }
     return Row(
       children: [
-        SizedBox(width: 280, child: _buildFileTree(colors)),
+        SizedBox(width: 280, child: _buildKbScope(colors)),
         VerticalDivider(width: 1, color: colors.border),
         Expanded(
           child: Column(
@@ -356,8 +402,13 @@ class _KbPageState extends State<KbPage> {
     );
   }
 
-  Widget _buildFileTree(SpringThemeColors colors) {
-    final tree = _tree;
+  /// 知识库范围：仅文件夹路径列表（告诉 LLM 知识库覆盖哪些位置）。
+  Widget _buildKbScope(SpringThemeColors colors) {
+    final health = _health;
+    final dataDir = health?['data_dir'] as String? ?? '';
+    final config = _config;
+    final sources = (config?['sources'] as List? ?? []).cast<String>();
+    final extraSources = (config?['extra_sources'] as List? ?? []).cast<String>();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -365,8 +416,13 @@ class _KbPageState extends State<KbPage> {
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
           child: Row(
             children: [
-              Text('文件', style: TextStyle(color: colors.textMuted, fontSize: 12)),
+              Text('知识库范围', style: TextStyle(color: colors.textMuted, fontSize: 12)),
               const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.folder_open_outlined, size: 16),
+                tooltip: '打开数据目录',
+                onPressed: _openFolder,
+              ),
               IconButton(
                 icon: const Icon(Icons.refresh, size: 16),
                 tooltip: '刷新',
@@ -375,15 +431,42 @@ class _KbPageState extends State<KbPage> {
             ],
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Text(
+            dataDir.isEmpty ? '数据目录：未知' : '数据目录：$dataDir',
+            style: TextStyle(fontSize: 11, color: colors.textMuted),
+          ),
+        ),
+        const Divider(height: 1),
         Expanded(
-          child: tree == null
-              ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                  child: _TreeNodeView(
-                    node: tree,
-                    onFileTap: (path) => _openRef(path),
+          child: ListView(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            children: [
+              for (final s in sources)
+                if (s.isNotEmpty)
+                  _ScopePathTile(icon: Icons.folder_outlined, path: s),
+              if (extraSources.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+                  child: Text(
+                    '外部文件夹',
+                    style: TextStyle(fontSize: 11, color: colors.textMuted),
                   ),
                 ),
+                for (final s in extraSources)
+                  _ScopePathTile(icon: Icons.folder_special_outlined, path: s),
+              ],
+              if (sources.isEmpty && extraSources.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    '暂无知识库文件夹，请到「设置 → 知识库文件夹」添加',
+                    style: TextStyle(fontSize: 12, color: colors.textMuted),
+                  ),
+                ),
+            ],
+          ),
         ),
       ],
     );
@@ -463,6 +546,33 @@ class _KbPageState extends State<KbPage> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ScopePathTile extends StatelessWidget {
+  const _ScopePathTile({required this.icon, required this.path});
+
+  final IconData icon;
+  final String path;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+      child: Row(
+        children: [
+          Icon(icon, size: 15, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              path,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12.5),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -579,7 +689,9 @@ class _TreeNodeViewState extends State<_TreeNodeView> {
     final name = widget.node['name'] as String? ?? '';
     final type = widget.node['type'] as String? ?? 'dir';
     final children = (widget.node['children'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-    final path = widget.pathPrefix.isEmpty ? name : '${widget.pathPrefix}/$name';
+    // 外部源节点携带绝对 path；数据目录内节点由 pathPrefix 拼接相对路径
+    final nodePath = widget.node['path'] as String?;
+    final path = nodePath ?? (widget.pathPrefix.isEmpty ? name : '${widget.pathPrefix}/$name');
 
     if (type == 'file') {
       return InkWell(

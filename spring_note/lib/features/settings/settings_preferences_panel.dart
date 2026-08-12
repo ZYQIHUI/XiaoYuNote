@@ -444,6 +444,12 @@ class _PreferencesPanel extends StatelessWidget {
               saving: saving,
               onChanged: onDataDirectoryChanged,
             ),
+            _KbLocationSettingRow(
+              dataDirectory: dataDirectory,
+              kbDataDir: config.kbDataDir,
+              onChanged: (path) => onChanged(config.copyWith(kbDataDir: path)),
+            ),
+            _KbFoldersSettingRow(),
           ],
         ),
         _SettingsCard(
@@ -2134,6 +2140,251 @@ class _DataDirectorySettingRowState extends State<_DataDirectorySettingRow> {
 }
 
 enum _DataDirectoryActionIconType { folderUp }
+
+/// 知识库文件夹管理：添加/移除多个文件夹作为知识库来源（sidecar extra_sources）。
+class _KbFoldersSettingRow extends StatefulWidget {
+  const _KbFoldersSettingRow();
+
+  @override
+  State<_KbFoldersSettingRow> createState() => _KbFoldersSettingRowState();
+}
+
+class _KbFoldersSettingRowState extends State<_KbFoldersSettingRow> {
+  List<String> _folders = [];
+  bool _loading = false;
+  bool _saving = false;
+  bool _loadedOnce = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    // 惰性加载：不自动连 sidecar，避免测试环境网络泄漏
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final client = SidecarClient();
+      await client.loadConnection();
+      final cfg = await client.config();
+      if (mounted) {
+        setState(() {
+          _folders = (cfg['extra_sources'] as List? ?? [])
+              .map((e) => e.toString())
+              .toList();
+          _loadedOnce = true;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _addFolder() async {
+    // 首次操作前先加载当前列表（避免覆盖 sidecar 已有配置）
+    if (!_loadedOnce) {
+      await _load();
+      if (!mounted) return;
+    }
+    final path = await getDirectoryPath(
+      confirmButtonText: l10n(context).settingsSelectThisFolder,
+    );
+    if (path == null || path.trim().isEmpty) return;
+    if (_folders.contains(path.trim())) return;
+    await _save([..._folders, path.trim()]);
+  }
+
+  Future<void> _removeFolder(int index) async {
+    final next = [..._folders]..removeAt(index);
+    await _save(next);
+  }
+
+  Future<void> _save(List<String> folders) async {
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      final client = SidecarClient();
+      await client.loadConnection();
+      await client.setConfig({'extra_sources': folders});
+      if (mounted) setState(() => _folders = folders);
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = l10n(context);
+    return _SettingRowShell(
+      label: strings.settingsKbFolders,
+      description: strings.settingsKbFoldersDescription,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < _folders.length; i++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        _folders[i],
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.colors(context).textMuted,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    InkWell(
+                      onTap: _saving ? null : () => _removeFolder(i),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          Icons.close,
+                          size: 15,
+                          color: AppTheme.colors(context).textMuted,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  _error!,
+                  style: const TextStyle(fontSize: 12, color: Color(0xFFDC2626)),
+                ),
+              ),
+            OutlinedButton.icon(
+              onPressed: _loading || _saving ? null : _addFolder,
+              icon: _saving
+                  ? const SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.add, size: 15),
+              label: Text(strings.settingsKbAddFolder),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                minimumSize: const Size(0, 30),
+                textStyle: const TextStyle(fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 知识库位置设置行：kbDataDir（null = 跟随数据目录）。
+class _KbLocationSettingRow extends StatelessWidget {
+  const _KbLocationSettingRow({
+    required this.dataDirectory,
+    required this.kbDataDir,
+    required this.onChanged,
+  });
+
+  final String dataDirectory;
+  final String? kbDataDir;
+  final ValueChanged<String?> onChanged;
+
+  /// 实际生效的知识库目录（未自定义时跟随数据目录）。
+  String get _effectiveDir => kbDataDir ?? dataDirectory;
+
+  Future<void> _pickDirectory(BuildContext context) async {
+    final path = await getDirectoryPath(
+      initialDirectory: _effectiveDir,
+      confirmButtonText: l10n(context).settingsSelectThisFolder,
+    );
+    if (path == null || path.trim().isEmpty) {
+      return;
+    }
+    onChanged(path.trim());
+  }
+
+  Future<void> _openFolder(BuildContext context) async {
+    final ok = await const ExternalLinkService().openFolder(_effectiveDir);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n(context).settingsOpenFolderFailed(_effectiveDir))),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = l10n(context);
+    final display = kbDataDir ?? strings.settingsKbLocationFollowDataDir;
+    return _SettingRowShell(
+      label: strings.settingsKbLocation,
+      description: strings.settingsKbLocationDescription,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Expanded(
+              child: Text(
+                display,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.colors(context).textMuted,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            _DataDirectoryActionButton(
+              tooltip: strings.settingsSelectKbDirectory,
+              onPressed: () => _pickDirectory(context),
+              child: const _DataDirectoryActionIcon(
+                type: _DataDirectoryActionIconType.folderUp,
+                size: 16,
+              ),
+            ),
+            const SizedBox(width: 2),
+            _DataDirectoryActionButton(
+              tooltip: strings.settingsOpenFolder,
+              onPressed: () => _openFolder(context),
+              child: const Icon(Icons.folder_open_outlined, size: 17),
+            ),
+            const SizedBox(width: 2),
+            _DataDirectoryActionButton(
+              tooltip: strings.settingsRestoreDefaultKbDirectory,
+              onPressed: kbDataDir == null ? null : () => onChanged(null),
+              child: const Icon(Icons.restart_alt_rounded, size: 17),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _DataDirectoryActionButton extends StatefulWidget {
   const _DataDirectoryActionButton({

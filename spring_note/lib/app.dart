@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:ui' show AppExitResponse;
 
 import 'package:flutter/cupertino.dart' show CupertinoLocalizations;
@@ -58,6 +60,13 @@ class _XiaoYuNoteAppState extends State<XiaoYuNoteApp> {
   Future<LocalDataState> _initialize() async {
     final state = await widget.localDataService.initialize();
     await widget.statsService.recordAppStartup(appDataDir: state.dataDirectory);
+    // 数据目录就绪后再启动 sidecar，注入知识库位置（测试环境不 spawn 真实进程）
+    if (!Platform.environment.containsKey('FLUTTER_TEST')) {
+      SidecarLifecycle.instance
+        ..dataDirectory = state.dataDirectory
+        ..kbDataDir = state.config.kbDataDir;
+      unawaited(SidecarLifecycle.instance.start());
+    }
     if (mounted) {
       setState(() => _config = state.config);
     } else {

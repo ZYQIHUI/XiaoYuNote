@@ -28,4 +28,29 @@ class ExternalLinkService {
 
     return false;
   }
+
+  /// 用系统文件管理器打开本地文件夹（Windows explorer / macOS open / Linux xdg-open）。
+  Future<bool> openFolder(String path) async {
+    final dir = Directory(path);
+    if (!dir.existsSync()) {
+      return false;
+    }
+    try {
+      if (Platform.isWindows) {
+        await Process.start('explorer', [dir.path], runInShell: false);
+        return true;
+      }
+      if (Platform.isMacOS) {
+        await Process.start('open', [dir.path], runInShell: false);
+        return true;
+      }
+      if (Platform.isLinux) {
+        await Process.start('xdg-open', [dir.path], runInShell: false);
+        return true;
+      }
+    } catch (_) {
+      return false;
+    }
+    return false;
+  }
 }

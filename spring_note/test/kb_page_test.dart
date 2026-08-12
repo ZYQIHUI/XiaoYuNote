@@ -54,6 +54,15 @@ class FakeKbDataSource implements KbDataSource {
   }
 
   @override
+  Future<Map<String, dynamic>> config() async {
+    requests.add('config');
+    return {
+      'sources': ['个人', 'notes'],
+      'extra_sources': ['D:/外部资料'],
+    };
+  }
+
+  @override
   Future<String> readText(String path) async => '# 日报\n- 拼房对账完成';
 
   @override
@@ -71,21 +80,19 @@ class FakeKbDataSource implements KbDataSource {
 }
 
 void main() {
-  testWidgets('KbPage 渲染文件树、状态栏并完成流式问答', (tester) async {
+  testWidgets('KbPage 渲染知识库范围、状态栏并完成流式问答', (tester) async {
     final ds = FakeKbDataSource();
     await tester.pumpWidget(
       MaterialApp(home: Scaffold(body: KbPage(dataSource: ds))),
     );
     await tester.pumpAndSettle();
 
-    // 展开根目录与业务区目录后文件树可见文件
-    await tester.tap(find.text('data'));
-    await tester.pumpAndSettle();
+    // 左侧知识库范围（文件夹路径列表，非文件树）
+    expect(find.text('知识库范围'), findsOneWidget);
     expect(find.text('个人'), findsOneWidget);
     expect(find.text('notes'), findsOneWidget);
-    await tester.tap(find.text('个人'));
-    await tester.pumpAndSettle();
-    expect(find.text('对账清单.xlsx'), findsOneWidget);
+    expect(find.text('外部文件夹'), findsOneWidget);
+    expect(find.text('D:/外部资料'), findsOneWidget);
 
     // 状态栏（索引统计 + 立即索引按钮）
     expect(find.text('文件 2'), findsOneWidget);

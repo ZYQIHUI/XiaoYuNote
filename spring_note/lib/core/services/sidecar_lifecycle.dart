@@ -32,6 +32,14 @@ class SidecarLifecycle {
   @visibleForTesting
   Map<String, String>? envOverride;
 
+  /// Flutter 数据目录（笔记目录）；sidecar 知识库位置的默认跟随目标。
+  /// 由 app 在数据目录加载完成后设置（spawn 前）。
+  String? dataDirectory;
+
+  /// 知识库（sidecar）数据目录；null = 跟随 [dataDirectory]。
+  /// 注入为环境变量 XIAOYU_DATA_DIR，决定 kb.sqlite3 与业务文件区位置。
+  String? kbDataDir;
+
   Process? _process;
   bool _started = false;
   bool _stopping = false;
@@ -75,8 +83,27 @@ class SidecarLifecycle {
 
     final sidecarDir =
         resolveDirOverride != null ? resolveDirOverride!() : _resolveSidecarDir();
-    final python = await _findPython();
     final env = Map<String, String>.from(Platform.environment);
+    // 知识库位置：kbDataDir > dataDirectory；缺失时不注入（sidecar 用默认 %APPDATA%\XiaoYu）
+    final kbDir = kbDataDir ?? dataDirectory;
+    if (kbDir != null && kbDir.isNotEmpty) {
+      env['XIAOYU_DATA_DIR'] = kbDir;
+    }
+    // 同步给 Flutter 客户端，使读取的 .sidecar.json 与 sidecar 写入的一致（避免 401）
+    SidecarClient.configuredDataDir = kbDir;
+    // 优先使用打包后的可执行（PyInstaller onedir），其次 Python 源码
+    final exe = _resolveSidecarExecutable(sidecarDir);
+    if (exe != null) {
+      debugPrint('sidecar 使用打包可执行：$exe');
+      return Process.start(
+        exe,
+        const [],
+        workingDirectory: File(exe).parent.path,
+        environment: env,
+        mode: ProcessStartMode.detachedWithStdio,
+      );
+    }
+    final python = await _findPython();
     return Process.start(
       python,
       ['-m', 'sidecar'],
@@ -107,6 +134,25 @@ class SidecarLifecycle {
       return '$dev${Platform.pathSeparator}sidecar';
     }
     throw const SidecarUnavailableException('未找到 sidecar 目录（可设置 SIDECAR_DIR）');
+  }
+
+  /// 在 sidecar 目录中查找打包可执行（PyInstaller onedir）。
+  /// 支持两种布局：sidecar/xiaoyu-sidecar.exe 或 sidecar/xiaoyu-sidecar/xiaoyu-sidecar.exe。
+  String? _resolveSidecarExecutable(String dir) {
+    final base = Directory(dir);
+    if (!base.existsSync()) {
+      return null;
+    }
+    for (final candidate in [
+      '${base.path}${Platform.pathSeparator}xiaoyu-sidecar.exe',
+      '${base.path}${Platform.pathSeparator}xiaoyu-sidecar'
+          '${Platform.pathSeparator}xiaoyu-sidecar.exe',
+    ]) {
+      if (File(candidate).existsSync()) {
+        return candidate;
+      }
+    }
+    return null;
   }
 
   Future<String> _findPython() async {

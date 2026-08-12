@@ -509,5 +509,17 @@
   "settingsEditWeeklyReportPromptTitle": "Edit weekly report prompt",
   "settingsWeeklyReportPromptHint": "Enter weekly report Prompt...",
   "settingsVariablePeriodLabel": "Report period",
-  "settingsVariableSourceMarkdown": "Daily notes of the week"
+  "settingsVariableSourceMarkdown": "Daily notes of the week",
+  "settingsKbLocation": "Knowledge base location",
+  "settingsKbLocationDescription": "Directory of the knowledge base index (kb.sqlite3) and business files; defaults to the data directory. Takes effect after restart.",
+  "settingsKbLocationFollowDataDir": "Follow the data directory",
+  "settingsSelectKbDirectory": "Choose knowledge base directory",
+  "settingsOpenFolder": "Open folder",
+  "settingsRestoreDefaultKbDirectory": "Restore default (follow data directory)",
+  "settingsOpenFolderFailed": "Failed to open folder: {path}",
+  "settingsKbFolders": "Knowledge base folders",
+  "settingsKbFoldersDescription": "Add folders as knowledge base sources (not limited to the data directory). Re-index after saving.",
+  "settingsKbAddFolder": "Add folder",
+  "settingsKbRemoveFolder": "Remove",
+  "notesOpenKbFiles": "Knowledge base files"
 }

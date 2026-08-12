@@ -1649,4 +1649,43 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsVariableSourceMarkdown => '本周日报内容';
+
+  @override
+  String get settingsKbLocation => '知识库位置';
+
+  @override
+  String get settingsKbLocationDescription =>
+      '知识库索引（kb.sqlite3）与业务文件所在目录；默认跟随数据目录，修改后重启应用生效。';
+
+  @override
+  String get settingsKbLocationFollowDataDir => '跟随数据目录';
+
+  @override
+  String get settingsSelectKbDirectory => '选择知识库目录';
+
+  @override
+  String get settingsOpenFolder => '打开文件夹';
+
+  @override
+  String get settingsRestoreDefaultKbDirectory => '恢复默认（跟随数据目录）';
+
+  @override
+  String settingsOpenFolderFailed(Object path) {
+    return '打开文件夹失败：$path';
+  }
+
+  @override
+  String get settingsKbFolders => '知识库文件夹';
+
+  @override
+  String get settingsKbFoldersDescription => '添加文件夹作为知识库来源（不限于数据目录），保存后重新索引生效。';
+
+  @override
+  String get settingsKbAddFolder => '添加文件夹';
+
+  @override
+  String get settingsKbRemoveFolder => '移除';
+
+  @override
+  String get notesOpenKbFiles => '知识库文件';
 }

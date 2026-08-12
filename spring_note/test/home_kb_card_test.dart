@@ -35,6 +35,11 @@ class FakeKbDataSource implements KbDataSource {
   }
 
   @override
+  Future<Map<String, dynamic>> config() async {
+    return {'sources': [], 'extra_sources': []};
+  }
+
+  @override
   Future<String> readText(String path) async => '';
 
   @override

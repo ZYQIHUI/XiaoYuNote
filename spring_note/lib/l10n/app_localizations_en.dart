@@ -1714,4 +1714,45 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsVariableSourceMarkdown => 'Daily notes of the week';
+
+  @override
+  String get settingsKbLocation => 'Knowledge base location';
+
+  @override
+  String get settingsKbLocationDescription =>
+      'Directory of the knowledge base index (kb.sqlite3) and business files; defaults to the data directory. Takes effect after restart.';
+
+  @override
+  String get settingsKbLocationFollowDataDir => 'Follow the data directory';
+
+  @override
+  String get settingsSelectKbDirectory => 'Choose knowledge base directory';
+
+  @override
+  String get settingsOpenFolder => 'Open folder';
+
+  @override
+  String get settingsRestoreDefaultKbDirectory =>
+      'Restore default (follow data directory)';
+
+  @override
+  String settingsOpenFolderFailed(Object path) {
+    return 'Failed to open folder: $path';
+  }
+
+  @override
+  String get settingsKbFolders => 'Knowledge base folders';
+
+  @override
+  String get settingsKbFoldersDescription =>
+      'Add folders as knowledge base sources (not limited to the data directory). Re-index after saving.';
+
+  @override
+  String get settingsKbAddFolder => 'Add folder';
+
+  @override
+  String get settingsKbRemoveFolder => 'Remove';
+
+  @override
+  String get notesOpenKbFiles => 'Knowledge base files';
 }

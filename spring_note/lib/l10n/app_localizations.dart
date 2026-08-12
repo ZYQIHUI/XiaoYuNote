@@ -3166,6 +3166,78 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'本周日报内容'**
   String get settingsVariableSourceMarkdown;
+
+  /// No description provided for @settingsKbLocation.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识库位置'**
+  String get settingsKbLocation;
+
+  /// No description provided for @settingsKbLocationDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识库索引（kb.sqlite3）与业务文件所在目录；默认跟随数据目录，修改后重启应用生效。'**
+  String get settingsKbLocationDescription;
+
+  /// No description provided for @settingsKbLocationFollowDataDir.
+  ///
+  /// In zh, this message translates to:
+  /// **'跟随数据目录'**
+  String get settingsKbLocationFollowDataDir;
+
+  /// No description provided for @settingsSelectKbDirectory.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择知识库目录'**
+  String get settingsSelectKbDirectory;
+
+  /// No description provided for @settingsOpenFolder.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开文件夹'**
+  String get settingsOpenFolder;
+
+  /// No description provided for @settingsRestoreDefaultKbDirectory.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复默认（跟随数据目录）'**
+  String get settingsRestoreDefaultKbDirectory;
+
+  /// No description provided for @settingsOpenFolderFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开文件夹失败：{path}'**
+  String settingsOpenFolderFailed(Object path);
+
+  /// No description provided for @settingsKbFolders.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识库文件夹'**
+  String get settingsKbFolders;
+
+  /// No description provided for @settingsKbFoldersDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加文件夹作为知识库来源（不限于数据目录），保存后重新索引生效。'**
+  String get settingsKbFoldersDescription;
+
+  /// No description provided for @settingsKbAddFolder.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加文件夹'**
+  String get settingsKbAddFolder;
+
+  /// No description provided for @settingsKbRemoveFolder.
+  ///
+  /// In zh, this message translates to:
+  /// **'移除'**
+  String get settingsKbRemoveFolder;
+
+  /// No description provided for @notesOpenKbFiles.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识库文件'**
+  String get notesOpenKbFiles;
 }
 
 class _AppLocalizationsDelegate

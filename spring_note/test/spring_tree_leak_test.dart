@@ -5,6 +5,7 @@ import 'package:spring_note/core/models/local_data_state.dart';
 import 'package:spring_note/core/models/note_file.dart';
 import 'package:spring_note/core/services/note_service.dart';
 import 'package:spring_note/core/theme/app_theme.dart';
+import 'package:spring_note/features/notes/kb_file_tree_panel.dart';
 import 'package:spring_note/features/notes/notes_page.dart';
 
 const _notePath = 'D:\\Temp\\XiaoYuNote\\notes\\daily\\2026-06-18.md';
@@ -82,6 +83,49 @@ class _MemoryNoteService extends NoteService {
   }
 }
 
+/// 文件树 mock：返回 daily 目录 + 单个 md 文件。
+class _MemoryKbFileDataSource implements KbFileDataSource {
+  @override
+  Future<Map<String, dynamic>> dirs() async => {
+    'dirs': [{'path': '', 'label': 'XiaoYuNote', 'root': ''}],
+  };
+  @override
+  Future<Map<String, dynamic>> filesTreeRoot(String root) async => {
+    'name': 'XiaoYuNote',
+    'type': 'dir',
+    'children': [
+      {
+        'name': 'notes',
+        'type': 'dir',
+        'children': [
+          {
+            'name': 'daily',
+            'type': 'dir',
+            'children': [
+              {'name': '2026-06-18.md', 'type': 'file', 'size': 10},
+            ],
+          },
+        ],
+      },
+    ],
+  };
+  @override
+  Future<String> readText(String path) async => _markdown;
+  @override
+  Future<void> writeText(String path, String content) async {}
+  @override
+  Future<Map<String, dynamic>> readXlsx(String path) async => {'content_base64': ''};
+  @override
+  Future<void> createFile(String path, {String content = ''}) async {}
+  @override
+  Future<void> createDir(String path) async {}
+  @override
+  Future<void> delete(String path) async {}
+
+  @override
+  Future<void> addSource(String path) async {}
+}
+
 void main() {
   testWidgets('notes workspace mode switches release springtree resources', (
     tester,
@@ -92,6 +136,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     final noteService = _MemoryNoteService({_notePath: _markdown});
+    final kbDataSource = _MemoryKbFileDataSource();
 
     await tester.pumpWidget(
       MaterialApp(
@@ -99,9 +144,17 @@ void main() {
         home: NotesPage(
           localDataState: _localDataState,
           noteService: noteService,
+          kbFileDataSource: kbDataSource,
         ),
       ),
     );
+    await tester.pumpAndSettle();
+    // 展开文件树目录（默认收起）后点击文件
+    await tester.tap(find.text('notes'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('daily'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('2026-06-18.md'));
     await tester.pumpAndSettle();
 
     for (var cycle = 0; cycle < 6; cycle++) {

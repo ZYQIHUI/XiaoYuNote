@@ -22,6 +22,7 @@ import '../../core/services/external_link_service.dart';
 import '../../core/services/local_data_service.dart';
 import '../../core/services/note_image_cleanup_service.dart';
 import '../../core/services/platform_feature_support.dart';
+import '../../core/services/sidecar_client.dart';
 import '../../core/services/system_font_service.dart';
 import '../../core/services/update_check_service.dart';
 import '../../core/services/wallpaper_service.dart';

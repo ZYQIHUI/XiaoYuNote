@@ -76,8 +76,11 @@ class Config:
     root_dir: Path = field(default_factory=lambda: Path(__file__).resolve().parent)
 
 
-def load_config(config_path: Optional[Path] = None) -> Config:
-    """加载 config.toml + .env，返回校验后的 Config 对象。"""
+def load_config(config_path: Optional[Path] = None, env_path: Optional[Path] = None) -> Config:
+    """加载 config.toml + .env，返回校验后的 Config 对象。
+
+    env_path：.env 位置（打包后为数据目录 kb/.env，由 server 传入）。
+    """
     root = Path(__file__).resolve().parent
     cfg_path = config_path or root / "config.toml"
 
@@ -88,7 +91,7 @@ def load_config(config_path: Optional[Path] = None) -> Config:
             raw = tomllib.load(f)
 
     # 2) 加载 .env 到环境变量（不覆盖 shell 中已存在的变量）
-    _load_dotenv(root / ".env")
+    _load_dotenv(env_path or root / ".env")
 
     # 3) 构建默认 Config，用 TOML 覆盖
     cfg = Config(root_dir=root)

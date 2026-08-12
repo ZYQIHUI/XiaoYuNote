@@ -32,7 +32,8 @@ def scan(cfg: Config, dry_run: bool = False, source: Optional[str] = None) -> Sc
     sources = [source] if source else cfg.data.sources
     all_files: list[Path] = []
     for source_name in sources:
-        source_path = root / source_name
+        # 支持绝对路径（外部知识库文件夹）与相对路径（数据目录内业务区）
+        source_path = Path(source_name) if Path(source_name).is_absolute() else root / source_name
         if not source_path.exists():
             logger.warning(f"数据源目录不存在: {source_path}")
             continue
@@ -49,7 +50,11 @@ def scan(cfg: Config, dry_run: bool = False, source: Optional[str] = None) -> Sc
     disk_rel_paths: set[str] = set()
 
     for fpath in all_files:
-        rel = fpath.relative_to(root).as_posix()
+        try:
+            rel = fpath.relative_to(root).as_posix()
+        except ValueError:
+            # 外部知识库文件夹（在数据目录之外）：用源目录名作为顶层前缀
+            rel = _external_rel(fpath, cfg)
         disk_rel_paths.add(rel)
 
         # 黑名单检查
@@ -96,7 +101,24 @@ def scan(cfg: Config, dry_run: bool = False, source: Optional[str] = None) -> Sc
     return result
 
 
+def _external_rel(fpath: Path, cfg: Config) -> str:
+    """外部知识库文件的相对路径：{源目录名}/{相对源目录}。"""
+    abs_fpath = fpath.resolve()
+    for source_name in cfg.data.sources:
+        sp = Path(source_name)
+        if not sp.is_absolute():
+            continue
+        abs_source = sp.resolve()
+        try:
+            return abs_fpath.relative_to(abs_source).as_posix()
+        except ValueError:
+            continue
+    # 兜底：用文件名（极少触发）
+    return fpath.name
+
+
 def _walk(base: Path, cfg: Config) -> list[Path]:
+    """递归收集白名单扩展名文件，排除黑名单路径。"""
     """递归收集白名单扩展名文件，排除黑名单路径。"""
     results: list[Path] = []
     excluded_dirs = [d.lower() for d in cfg.data.exclude_dirs]

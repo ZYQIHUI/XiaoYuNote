@@ -509,5 +509,17 @@
   "settingsEditWeeklyReportPromptTitle": "编辑周报整理提示词",
   "settingsWeeklyReportPromptHint": "输入周报整理 Prompt...",
   "settingsVariablePeriodLabel": "周报周期",
-  "settingsVariableSourceMarkdown": "本周日报内容"
+  "settingsVariableSourceMarkdown": "本周日报内容",
+  "settingsKbLocation": "知识库位置",
+  "settingsKbLocationDescription": "知识库索引（kb.sqlite3）与业务文件所在目录；默认跟随数据目录，修改后重启应用生效。",
+  "settingsKbLocationFollowDataDir": "跟随数据目录",
+  "settingsSelectKbDirectory": "选择知识库目录",
+  "settingsOpenFolder": "打开文件夹",
+  "settingsRestoreDefaultKbDirectory": "恢复默认（跟随数据目录）",
+  "settingsOpenFolderFailed": "打开文件夹失败：{path}",
+  "settingsKbFolders": "知识库文件夹",
+  "settingsKbFoldersDescription": "添加文件夹作为知识库来源（不限于数据目录），保存后重新索引生效。",
+  "settingsKbAddFolder": "添加文件夹",
+  "settingsKbRemoveFolder": "移除",
+  "notesOpenKbFiles": "知识库文件"
 }

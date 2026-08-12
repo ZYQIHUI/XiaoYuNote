@@ -41,12 +41,19 @@ class UniverSheetWidgetState extends State<UniverSheetWidget> {
   final WebviewController _controller = WebviewController();
   bool _initializing = true;
   String? _error;
+  bool _frontendReady = false;
 
   int _nextReqId = 1;
   final Map<int, Completer<Map<String, dynamic>>> _pending = {};
   StreamSubscription<dynamic>? _webMessageSub;
+  /// 前端就绪看门狗：页面加载后若迟迟未收到 ready 信号，尝试重新加载并最终报错，
+  /// 避免用户面对无任何反馈的白屏。
+  Timer? _readyWatchdog;
 
   bool get isReady => !_initializing && _error == null;
+
+  /// 前端（Univer JS）是否已就绪。
+  bool get isFrontendReady => _frontendReady;
 
   @override
   void initState() {
@@ -56,6 +63,7 @@ class UniverSheetWidgetState extends State<UniverSheetWidget> {
 
   @override
   void dispose() {
+    _readyWatchdog?.cancel();
     _webMessageSub?.cancel();
     _controller.dispose();
     super.dispose();
@@ -72,7 +80,11 @@ class UniverSheetWidgetState extends State<UniverSheetWidget> {
           _initializing = false;
           _error = null;
         });
-        widget.onReady?.call();
+        // 等下一帧：确保 widget 完成 build、GlobalKey.currentState 可用后再通知宿主
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) widget.onReady?.call();
+        });
+        _armReadyWatchdog();
       }
     } catch (e) {
       if (mounted) {
@@ -84,11 +96,49 @@ class UniverSheetWidgetState extends State<UniverSheetWidget> {
     }
   }
 
+  /// 前端就绪看门狗：加载后 15s 未就绪 → reload 一次；再等 10s 仍未就绪 → 报错。
+  void _armReadyWatchdog() {
+    _readyWatchdog?.cancel();
+    _readyWatchdog = Timer(const Duration(seconds: 15), () async {
+      if (!mounted || _frontendReady || _error != null) return;
+      // 页面可能加载失败（如 sidecar 未就绪时连接被拒），尝试重新加载一次。
+      // 若 sidecar 在此期间已就绪，重载即恢复正常；否则给出明确错误。
+      try {
+        await _controller.loadUrl(widget.htmlUrl);
+      } catch (_) {
+        // loadUrl 失败（如导航异常）：继续走下方报错
+      }
+      await Future<void>.delayed(const Duration(seconds: 10));
+      if (mounted && !_frontendReady && _error == null) {
+        setState(() {
+          _error = '表格前端加载失败（页面无法就绪，请确认 sidecar 服务已启动）';
+        });
+      }
+    });
+  }
+
   void _onWebMessage(dynamic message) {
     final raw = message is String ? message : message?.toString();
     if (raw == null) return;
     try {
       final data = jsonDecode(raw) as Map<String, dynamic>;
+      // 前端就绪通知
+      if (data['type'] == 'ready') {
+        _frontendReady = true;
+        _readyWatchdog?.cancel();
+        return;
+      }
+      // 前端初始化/运行出错（bootstrap 捕获后主动上报）
+      if (data['type'] == 'error') {
+        _frontendReady = false;
+        _readyWatchdog?.cancel();
+        if (mounted) {
+          setState(() {
+            _error = '表格引擎初始化失败：${data['message'] ?? '未知错误'}';
+          });
+        }
+        return;
+      }
       if (data['type'] != 'result') return;
       final reqId = (data['reqId'] as num?)?.toInt();
       if (reqId == null) return;
@@ -103,6 +153,14 @@ class UniverSheetWidgetState extends State<UniverSheetWidget> {
   Future<Map<String, dynamic>> _request(String cmd, [Map<String, dynamic>? payload]) async {
     if (!isReady) {
       throw const UniverSheetException('表格引擎未就绪');
+    }
+    // 等待前端 JS 就绪（加载 Univer + 注册消息监听，通常 <3s）
+    final deadline = DateTime.now().add(const Duration(seconds: 12));
+    while (!_frontendReady) {
+      if (DateTime.now().isAfter(deadline)) {
+        throw const UniverSheetException('表格前端未就绪（加载超时）');
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 200));
     }
     final reqId = _nextReqId++;
     final completer = Completer<Map<String, dynamic>>();

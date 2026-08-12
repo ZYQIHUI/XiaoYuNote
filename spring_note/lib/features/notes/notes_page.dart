@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
@@ -19,6 +20,8 @@ import '../../core/services/pasted_image_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/sidecar_client.dart';
 import '../../features/kb/kb_page.dart';
+import '../sheets/sheet_editor_page.dart';
+import 'kb_file_tree_panel.dart';
 import '../../core/widgets/markdown_editor_highlight.dart';
 import '../../core/widgets/page_scaffold.dart';
 import '../../l10n/l10n.dart';
@@ -62,6 +65,8 @@ class NotesPage extends StatefulWidget {
     this.localDataService,
     this.onConfigChanged,
     this.kbDataSource,
+    this.kbFileDataSource,
+    this.openKbFileRequest,
   });
 
   final LocalDataState localDataState;
@@ -78,6 +83,12 @@ class NotesPage extends StatefulWidget {
 
   /// 边写边问：可注入的知识库数据源（测试用）。
   final KbDataSource? kbDataSource;
+
+  /// 可直接注入的文件树数据源（测试用）；优先于 [kbDataSource]。
+  final KbFileDataSource? kbFileDataSource;
+
+  /// 知识库引用跳转：外部请求在便签页打开的文件（变化时自动进入 kb 文件模式并打开）。
+  final String? openKbFileRequest;
 
   @override
   State<NotesPage> createState() => _NotesPageState();
@@ -117,13 +128,34 @@ class _NotesPageState extends State<NotesPage> {
   int _saveGeneration = 0;
   int _searchGeneration = 0;
   Timer? _searchDebounce;
+  // ignore: unused_field — 日报搜索（文件树取代日报列表后暂留）
   List<NoteFile> _searchResults = [];
+  // ignore: unused_field — 日报搜索
   bool _searching = false;
   Timer? _autoCloudSyncTimer;
   bool _autoCloudUploadAfterSave = false;
   bool _editorFocusedByPointer = false;
   late _EditorWorkspaceMode _workspaceMode;
   NoteUploadQueue? _ownedNoteUploadQueue;
+
+  /// 知识库文件模式：文件树常驻便签页左侧（无独立子面板）。
+  final GlobalKey _kbFileModeKey = GlobalKey();
+
+  /// 知识库引用跳转待打开的文件路径。
+  String? _kbOpenRequest;
+
+  /// 当前编辑的 KB 文件路径（非 null = 正在编辑知识库文件而非日报笔记）。
+  String? _kbEditPath;
+
+  /// 注入的 KB 数据源（测试用）；为空用真实实现。
+  KbFileDataSource? get _kbDataSource =>
+      widget.kbFileDataSource ??
+      (widget.kbDataSource == null
+          ? null
+          : KbFileTreeDataSourceAdapter(widget.kbDataSource!));
+
+  /// 真实 KB 数据源（惰性创建）。
+  SidecarKbFileDataSource? _kbRealDataSource;
 
   static const Duration _autoCloudSyncInterval = Duration(seconds: 3);
   static const int _minimumSearchQueryCharacters = 2;
@@ -171,6 +203,19 @@ class _NotesPageState extends State<NotesPage> {
     if (widget.localDataState != oldWidget.localDataState ||
         widget.noteUploadQueue != oldWidget.noteUploadQueue) {
       _noteUploadQueue.attach(widget.localDataState);
+    }
+    // 知识库引用跳转：外部请求在便签页打开文件
+    final request = widget.openKbFileRequest;
+    if (request != null &&
+        request.isNotEmpty &&
+        request != oldWidget.openKbFileRequest) {
+      // 剥离时间戳后缀（#...）
+      final hashIndex = request.indexOf('#');
+      final cleanPath =
+          hashIndex > 0 ? request.substring(0, hashIndex) : request;
+      setState(() {
+        _kbOpenRequest = cleanPath;
+      });
     }
   }
 
@@ -434,6 +479,7 @@ class _NotesPageState extends State<NotesPage> {
     unawaited(_refreshNoteIndex(kind: kind, loadGeneration: generation));
   }
 
+  // ignore: unused_element — 日报列表选择（暂留）
   Future<void> _selectNote(
     NoteFile note, {
     TextSelection? initialSelection,
@@ -527,7 +573,11 @@ class _NotesPageState extends State<NotesPage> {
 
     if (_consumingFimPrediction) {
       if (textChanged) {
-        _saveEditorText(selected, currentText);
+        if (_kbEditPath != null) {
+          _saveKbFile();
+        } else {
+          _saveEditorText(selected, currentText);
+        }
       }
       return;
     }
@@ -543,7 +593,128 @@ class _NotesPageState extends State<NotesPage> {
       return;
     }
 
-    _saveEditorText(selected, currentText);
+    if (_kbEditPath != null) {
+      _saveKbFile();
+    } else {
+      _saveEditorText(selected, currentText);
+    }
+  }
+
+  /// 打开知识库文件（文件树点击）。
+  Future<void> _openKbFile(String path) async {
+    // 笔记目录（notes/daily|weekly|monthly）下的 md：走原有笔记体系（含云同步/再生成）
+    if (_isNoteDirectoryPath(path) && (path.endsWith('.md') || path.endsWith('.txt'))) {
+      await _selectNote(_kbPathToNoteFile(path));
+      return;
+    }
+    final ds = _kbDataSource;
+    if (ds == null) {
+      // 无注入数据源时，用真实 SidecarKbFileDataSource
+      _kbRealDataSource ??= SidecarKbFileDataSource();
+    }
+    final source = ds ?? _kbRealDataSource;
+    if (source == null) return;
+
+    // xlsx：全屏表格编辑器（push 打开，避免内嵌 WebView2 白屏/返回异常）
+    if (path.endsWith('.xlsx') || path.endsWith('.xls')) {
+      final client = SidecarClient();
+      try {
+        await client.loadConnection();
+      } catch (e) {
+        if (mounted) {
+          setState(() => _statusText = 'sidecar 未连接，无法打开表格');
+        }
+        return;
+      }
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => SheetEditorPage(path: path, client: client),
+        ),
+      );
+      // 返回后清空表格编辑状态（编辑器区回到文件树空态）
+      if (mounted) {
+        setState(() {
+          if (_kbEditPath != null &&
+              (_kbEditPath!.endsWith('.xlsx') || _kbEditPath!.endsWith('.xls'))) {
+            _kbEditPath = null;
+          }
+        });
+      }
+      return;
+    }
+    // md/txt：读入编辑器
+    if (!path.endsWith('.md') && !path.endsWith('.txt')) {
+      return;
+    }
+    try {
+      final content = await source.readText(path);
+      if (!mounted) return;
+      setState(() {
+        _kbEditPath = path;
+        _setEditorText(content);
+        _loading = false;
+        _statusText = '已打开 $path';
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _statusText = '读取失败：$e');
+      }
+    }
+  }
+
+  /// 路径是否在笔记目录下（notes/daily|weekly|monthly）。
+  bool _isNoteDirectoryPath(String path) {
+    final p = path.replaceAll('\\', '/');
+    return p.startsWith('notes/daily/') ||
+        p.startsWith('notes/weekly/') ||
+        p.startsWith('notes/monthly/');
+  }
+
+  /// 把 kb 路径转成 NoteFile（供 _selectNote 使用）。
+  NoteFile _kbPathToNoteFile(String path) {
+    final p = path.replaceAll('\\', '/');
+    final kind = p.startsWith('notes/daily/')
+        ? NoteKind.daily
+        : p.startsWith('notes/weekly/')
+        ? NoteKind.weekly
+        : NoteKind.monthly;
+    final name = p.split('/').last;
+    final fullPath =
+        '${_directoryFor(kind)}${Platform.pathSeparator}$name';
+    return NoteFile(
+      path: fullPath,
+      name: name,
+      title: name.replaceAll('.md', '').replaceAll('.txt', ''),
+      modifiedAt: DateTime.now(),
+      kind: kind,
+    );
+  }
+
+  /// 保存 KB 文件（md/txt 走 sidecar）。
+  Future<void> _saveKbFile() async {
+    final path = _kbEditPath;
+    if (path == null || _saving) return;
+    final source = _kbDataSource ?? _kbRealDataSource;
+    if (source == null) return;
+    final text = _editorController.text;
+    setState(() => _saving = true);
+    try {
+      await source.writeText(path, text);
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _statusText = '已保存 $path';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _statusText = '保存失败：$e';
+        });
+      }
+    }
   }
 
   Future<void> _saveEditorText(NoteFile selected, String text) async {
@@ -1384,42 +1555,65 @@ class _NotesPageState extends State<NotesPage> {
       color: colors.background,
       child: Row(
         children: [
-          _NotesSidebar(
-            kind: _kind,
-            notes: _notes,
-            searchResults: _searchResults,
-            searchQuery: _searchController.text.trim(),
-            searching: _searching,
-            selectedPath: selected?.path,
-            searchController: _searchController,
-            onKindChanged: (kind) => _loadNotes(kind: kind),
-            onNoteSelected: _selectNote,
+          KbFileTreePanel(
+            key: _kbFileModeKey,
+            dataSource: _kbDataSource,
+            onOpenFile: _openKbFile,
+            openFileRequest: _kbOpenRequest,
           ),
           Expanded(
             flex: 64,
-            child: _EditorWorkspace(
-              mode: _workspaceMode,
-              controller: _editorController,
-              editorRevision: _editorRevision,
-              undoController: _editorUndoController,
-              focusNode: _editorFocusNode,
-              statusText: _editorStatusText,
-              enabled: selected != null && !_loading && !_regeneratingReport,
-              predicting: _predicting,
-              markdown: _editorController.text,
-              localImageBasePath: selected == null
-                  ? null
-                  : _parentDirectoryPath(selected.path),
-              onInsertImage: _insertImageFromPicker,
-              regenerating: _regeneratingReport,
-              onAskKb: _askKbFromSelection,
-              onRegenerate: _regenerateSelectedReport,
-              onPointerFocus: _handleEditorPointerFocus,
-              onModeChanged: _handleWorkspaceModeChanged,
-            ),
+            child: _buildEditorArea(colors, selected),
           ),
         ],
       ),
+    );
+  }
+
+  /// 编辑器区域：KB 文件（md/txt 用原编辑器）或日报笔记。
+  /// xlsx 用全屏表格编辑器（push 打开，见 _openKbFile）。
+  Widget _buildEditorArea(SpringThemeColors colors, NoteFile? selected) {
+    // KB 文件模式（md/txt）
+    if (_kbEditPath != null) {
+      return _EditorWorkspace(
+        mode: _workspaceMode,
+        controller: _editorController,
+        editorRevision: _editorRevision,
+        undoController: _editorUndoController,
+        focusNode: _editorFocusNode,
+        statusText: _editorStatusText,
+        enabled: !_loading && !_regeneratingReport,
+        predicting: _predicting,
+        markdown: _editorController.text,
+        localImageBasePath: null,
+        onInsertImage: _insertImageFromPicker,
+        regenerating: _regeneratingReport,
+        onAskKb: _askKbFromSelection,
+        onRegenerate: _regenerateSelectedReport,
+        onPointerFocus: _handleEditorPointerFocus,
+        onModeChanged: _handleWorkspaceModeChanged,
+      );
+    }
+    // 日报笔记模式
+    return _EditorWorkspace(
+      mode: _workspaceMode,
+      controller: _editorController,
+      editorRevision: _editorRevision,
+      undoController: _editorUndoController,
+      focusNode: _editorFocusNode,
+      statusText: _editorStatusText,
+      enabled: selected != null && !_loading && !_regeneratingReport,
+      predicting: _predicting,
+      markdown: _editorController.text,
+      localImageBasePath: selected == null
+          ? null
+          : _parentDirectoryPath(selected.path),
+      onInsertImage: _insertImageFromPicker,
+      regenerating: _regeneratingReport,
+      onAskKb: _askKbFromSelection,
+      onRegenerate: _regenerateSelectedReport,
+      onPointerFocus: _handleEditorPointerFocus,
+      onModeChanged: _handleWorkspaceModeChanged,
     );
   }
 
@@ -1548,6 +1742,7 @@ class _FimTextEditingController extends TextEditingController {
   }
 }
 
+// ignore: unused_element — 日报列表侧栏（文件树取代后暂留）
 class _NotesSidebar extends StatelessWidget {
   const _NotesSidebar({
     required this.kind,
@@ -1559,6 +1754,8 @@ class _NotesSidebar extends StatelessWidget {
     required this.searchController,
     required this.onKindChanged,
     required this.onNoteSelected,
+    // ignore: unused_element_parameter — 知识库文件入口（暂留）
+    this.onOpenKbFiles,
   });
 
   final NoteKind kind;
@@ -1570,6 +1767,9 @@ class _NotesSidebar extends StatelessWidget {
   final TextEditingController searchController;
   final ValueChanged<NoteKind> onKindChanged;
   final ValueChanged<NoteFile> onNoteSelected;
+
+  /// 打开知识库文件面板（便签页内文件树 + 编辑，无问答）。
+  final VoidCallback? onOpenKbFiles;
 
   @override
   Widget build(BuildContext context) {
@@ -1603,6 +1803,19 @@ class _NotesSidebar extends StatelessWidget {
               _NotesKindMenuButton(kind: kind, onKindChanged: onKindChanged),
             ],
           ),
+          if (onOpenKbFiles != null) ...[
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: onOpenKbFiles,
+              icon: const Icon(Icons.folder_open_outlined, size: 15),
+              label: Text(l10n(context).notesOpenKbFiles),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                minimumSize: const Size(0, 32),
+                textStyle: const TextStyle(fontSize: 12),
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           _NotesSearchField(
             controller: searchController,

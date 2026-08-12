@@ -6,6 +6,7 @@ pub mod ai_openai;
 pub(crate) mod ai_tools;
 pub mod api;
 pub mod cloud_sync;
+pub mod kb;
 pub mod note_image_cleanup;
 pub mod note_index;
 pub mod report_regeneration;

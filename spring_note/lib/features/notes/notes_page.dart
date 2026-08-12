@@ -12,10 +12,8 @@ import '../../core/models/note_external_update.dart';
 import '../../core/models/note_file.dart';
 import '../../core/services/ai_client_service.dart';
 import '../../core/services/clipboard_image_service.dart';
-import '../../core/services/cloud_sync_service.dart';
 import '../../core/services/local_data_service.dart';
 import '../../core/services/note_service.dart';
-import '../../core/services/note_upload_queue.dart';
 import '../../core/services/pasted_image_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/sidecar_client.dart';
@@ -57,8 +55,6 @@ class NotesPage extends StatefulWidget {
     this.noteService = const NoteService(),
     this.aiClientService = const AiClientService(),
     this.clipboardImageService = const ClipboardImageService(),
-    this.cloudSyncService = const CloudSyncService(),
-    this.noteUploadQueue,
     this.pastedImageService = const PastedImageService(),
     this.externalNoteUpdate,
     this.imagePicker,
@@ -73,8 +69,6 @@ class NotesPage extends StatefulWidget {
   final NoteService noteService;
   final AiClientService aiClientService;
   final ClipboardImageService clipboardImageService;
-  final CloudSyncService cloudSyncService;
-  final NoteUploadQueue? noteUploadQueue;
   final PastedImageService pastedImageService;
   final ValueListenable<NoteExternalUpdate?>? externalNoteUpdate;
   final NoteImagePicker? imagePicker;
@@ -132,11 +126,7 @@ class _NotesPageState extends State<NotesPage> {
   List<NoteFile> _searchResults = [];
   // ignore: unused_field — 日报搜索
   bool _searching = false;
-  Timer? _autoCloudSyncTimer;
-  bool _autoCloudUploadAfterSave = false;
-  bool _editorFocusedByPointer = false;
   late _EditorWorkspaceMode _workspaceMode;
-  NoteUploadQueue? _ownedNoteUploadQueue;
 
   /// 知识库文件模式：文件树常驻便签页左侧（无独立子面板）。
   final GlobalKey _kbFileModeKey = GlobalKey();
@@ -157,7 +147,6 @@ class _NotesPageState extends State<NotesPage> {
   /// 真实 KB 数据源（惰性创建）。
   SidecarKbFileDataSource? _kbRealDataSource;
 
-  static const Duration _autoCloudSyncInterval = Duration(seconds: 3);
   static const int _minimumSearchQueryCharacters = 2;
 
   @override
@@ -171,11 +160,6 @@ class _NotesPageState extends State<NotesPage> {
     _editorController.addListener(_handleEditorChanged);
     _searchController.addListener(_handleSearchChanged);
     widget.externalNoteUpdate?.addListener(_handleExternalNoteUpdate);
-    _autoCloudSyncTimer = Timer.periodic(
-      _autoCloudSyncInterval,
-      (_) => unawaited(_flushPendingNoteUploads(requireEditorFocus: true)),
-    );
-    _noteUploadQueue.attach(widget.localDataState);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         setState(() => _statusText = l10n(context).notesFimReady);
@@ -199,10 +183,6 @@ class _NotesPageState extends State<NotesPage> {
     }
     if (_localDataDirectoryChanged(oldWidget.localDataState)) {
       unawaited(_loadNotes(kind: _kind));
-    }
-    if (widget.localDataState != oldWidget.localDataState ||
-        widget.noteUploadQueue != oldWidget.noteUploadQueue) {
-      _noteUploadQueue.attach(widget.localDataState);
     }
     // 知识库引用跳转：外部请求在便签页打开文件
     final request = widget.openKbFileRequest;
@@ -247,7 +227,6 @@ class _NotesPageState extends State<NotesPage> {
     _editorFocusNode.dispose();
     _fimDebounce?.cancel();
     _searchDebounce?.cancel();
-    _autoCloudSyncTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -298,25 +277,9 @@ class _NotesPageState extends State<NotesPage> {
     return KeyEventResult.ignored;
   }
 
-  void _handleEditorFocusChanged() {
-    if (_editorFocusNode.hasFocus) {
-      _autoCloudUploadAfterSave = false;
-      return;
-    }
-    final wasEditorFocusedByPointer = _editorFocusedByPointer;
-    _editorFocusedByPointer = false;
-    if (!wasEditorFocusedByPointer || !_autoCloudSyncAvailable) {
-      return;
-    }
-    if (_saving) {
-      _autoCloudUploadAfterSave = true;
-      return;
-    }
-    unawaited(_flushPendingNoteUploads(requireEditorFocus: false));
-  }
+  void _handleEditorFocusChanged() {}
 
   void _handleEditorPointerFocus() {
-    _editorFocusedByPointer = true;
     _captureInitialEditorSelectionSoon();
   }
 
@@ -726,7 +689,6 @@ class _NotesPageState extends State<NotesPage> {
     });
 
     await widget.noteService.writeMarkdown(selected.path, text);
-    _noteUploadQueue.markDirty(selected.path);
     await widget.noteService.indexMarkdownFile(
       directoryPath: directory,
       kind: kind,
@@ -756,64 +718,6 @@ class _NotesPageState extends State<NotesPage> {
     if (_searchController.text.trim().isNotEmpty) {
       _scheduleSearch();
     }
-    if (_autoCloudUploadAfterSave && !_editorFocusNode.hasFocus) {
-      _autoCloudUploadAfterSave = false;
-      unawaited(_flushPendingNoteUploads(requireEditorFocus: false));
-    }
-  }
-
-  Future<void> _flushPendingNoteUploads({
-    required bool requireEditorFocus,
-  }) async {
-    if (!_autoCloudSyncAvailable ||
-        (requireEditorFocus &&
-            (!_editorFocusNode.hasFocus || !_editorFocusedByPointer)) ||
-        _loading ||
-        _saving) {
-      return;
-    }
-
-    try {
-      final retryText = l10n(context).notesAutoSyncFailedRetry;
-      final result = await _noteUploadQueue.flush(
-        autoSyncFailedMessage: retryText,
-      );
-      if (!mounted || !result.attempted) {
-        return;
-      }
-      if (result.ok) {
-        setState(() {
-          _editorMessage = null;
-        });
-      } else {
-        setState(() {
-          final message = result.message;
-          _editorMessage = message.isEmpty || message == retryText
-              ? retryText
-              : l10n(context).notesAutoSyncFailedMessage(message);
-        });
-      }
-    } catch (error, stackTrace) {
-      debugPrint('Failed to auto upload note: $error\n$stackTrace');
-      if (mounted) {
-        setState(() => _editorMessage = l10n(context).notesAutoSyncFailedRetry);
-      }
-    }
-  }
-
-  bool get _autoCloudSyncAvailable {
-    final sync = widget.localDataState.config.cloudSync;
-    return sync.enabled && sync.realTimeSync && sync.hasRequiredFields;
-  }
-
-  NoteUploadQueue get _noteUploadQueue {
-    final provided = widget.noteUploadQueue;
-    if (provided != null) {
-      return provided;
-    }
-    return _ownedNoteUploadQueue ??= NoteUploadQueue(
-      cloudSyncService: widget.cloudSyncService,
-    )..attach(widget.localDataState);
   }
 
   void _setEditorText(

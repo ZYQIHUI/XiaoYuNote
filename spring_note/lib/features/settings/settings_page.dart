@@ -8,36 +8,26 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../core/models/app_config.dart';
-import '../../core/models/cloud_sync_config.dart';
-import '../../core/models/desktop_widget_wallpaper_settings.dart';
 import '../../core/models/local_data_state.dart';
 import '../../core/models/model_config.dart';
 import '../../core/models/model_reference.dart';
 import '../../core/models/provider_config.dart';
 import '../../core/models/structured_note_section_config.dart';
-import '../../core/models/wallpaper_settings.dart';
 import '../../core/services/ai_client_service.dart';
-import '../../core/services/cloud_sync_service.dart';
 import '../../core/services/external_link_service.dart';
 import '../../core/services/local_data_service.dart';
 import '../../core/services/note_image_cleanup_service.dart';
 import '../../core/services/platform_feature_support.dart';
 import '../../core/services/sidecar_client.dart';
 import '../../core/services/system_font_service.dart';
-import '../../core/services/update_check_service.dart';
-import '../../core/services/wallpaper_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/markdown_editor_highlight.dart';
-import '../../core/widgets/update_dialog.dart';
 import '../../l10n/l10n.dart';
 import '../../src/rust/ai.dart' as rust_ai;
-import 'settings_stats_panel.dart';
 
 part 'settings_preferences_panel.dart';
 part 'settings_providers_panel.dart';
 part 'settings_default_models_panel.dart';
-part 'settings_hotkeys_panel.dart';
-part 'settings_cloud_sync_panel.dart';
 part 'settings_storage_panel.dart';
 part 'settings_about_panel.dart';
 part 'settings_shared_widgets.dart';
@@ -46,10 +36,7 @@ enum _SettingsSection {
   preferences(_SettingsNavIconType.monitor),
   providers(_SettingsNavIconType.boxes),
   models(_SettingsNavIconType.heart),
-  hotkeys(_SettingsNavIconType.keyboard),
-  cloudSync(_SettingsNavIconType.cloud),
   storage(_SettingsNavIconType.storage),
-  stats(_SettingsNavIconType.chart),
   about(_SettingsNavIconType.info);
 
   const _SettingsSection(this.icon);
@@ -61,10 +48,7 @@ enum _SettingsNavIconType {
   monitor,
   boxes,
   heart,
-  keyboard,
-  cloud,
   storage,
-  chart,
   info,
   image,
   layers,
@@ -77,23 +61,17 @@ class SettingsPage extends StatefulWidget {
     required this.localDataState,
     this.localDataService = const LocalDataService(),
     this.aiClientService = const AiClientService(),
-    this.cloudSyncService = const CloudSyncService(),
     this.noteImageCleanupService = const NoteImageCleanupService(),
-    UpdateCheckService? updateCheckService,
     this.onConfigChanged,
     this.onLocalDataStateChanged,
-    this.onCloudSyncCompleted,
-  }) : updateCheckService = updateCheckService ?? UpdateCheckService();
+  });
 
   final LocalDataState localDataState;
   final LocalDataService localDataService;
   final AiClientService aiClientService;
-  final CloudSyncService cloudSyncService;
   final NoteImageCleanupService noteImageCleanupService;
-  final UpdateCheckService updateCheckService;
   final ValueChanged<AppConfig>? onConfigChanged;
   final ValueChanged<LocalDataState>? onLocalDataStateChanged;
-  final VoidCallback? onCloudSyncCompleted;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -422,17 +400,6 @@ class _SettingsPageState extends State<SettingsPage> {
         models: _allModels,
         onChanged: _updateConfig,
       ),
-      _SettingsSection.hotkeys => _HotkeysPanel(
-        config: _config,
-        onChanged: _updateConfig,
-      ),
-      _SettingsSection.cloudSync => _CloudSyncPanel(
-        config: _config,
-        localDataState: widget.localDataState.copyWith(config: _config),
-        cloudSyncService: widget.cloudSyncService,
-        onChanged: _updateConfig,
-        onCloudSyncCompleted: widget.onCloudSyncCompleted,
-      ),
       _SettingsSection.storage => _StoragePanel(
         localDataState: widget.localDataState.copyWith(config: _config),
         cleanupService: widget.noteImageCleanupService,
@@ -442,12 +409,7 @@ class _SettingsPageState extends State<SettingsPage> {
             : null,
         onScanChanged: _rememberStorageScan,
       ),
-      _SettingsSection.stats => SettingsStatsPanel(
-        localDataState: widget.localDataState.copyWith(config: _config),
-      ),
-      _SettingsSection.about => _AboutPanel(
-        updateCheckService: widget.updateCheckService,
-      ),
+      _SettingsSection.about => _AboutPanel(),
     };
   }
 }
@@ -476,10 +438,7 @@ class _SettingsNavItemState extends State<_SettingsNavItem> {
       _SettingsSection.preferences => strings.settingsSectionPreferences,
       _SettingsSection.providers => strings.settingsSectionProviders,
       _SettingsSection.models => strings.settingsSectionModels,
-      _SettingsSection.hotkeys => strings.settingsSectionHotkeys,
-      _SettingsSection.cloudSync => strings.settingsSectionCloudSync,
       _SettingsSection.storage => strings.settingsSectionStorage,
-      _SettingsSection.stats => strings.settingsSectionStats,
       _SettingsSection.about => strings.settingsSectionAbout,
     };
   }
@@ -716,83 +675,11 @@ class _SettingsNavLucidePainter extends CustomPainter {
           );
         canvas.drawPath(heart, paint);
         break;
-      case _SettingsNavIconType.keyboard:
-        canvas.drawRRect(roundedRect(3.5, 6, 17, 12), paint);
-        for (final y in [10.0, 13.2]) {
-          for (final x in [7.1, 10.4, 13.7, 17.0]) {
-            canvas.drawCircle(point(x, y), 0.36 * strokeScale, paint);
-          }
-        }
-        canvas.drawLine(point(8, 16), point(16, 16), paint);
-        break;
-      case _SettingsNavIconType.cloud:
-        final cloud = Path()
-          ..moveTo(point(7.3, 18).dx, point(7.3, 18).dy)
-          ..lineTo(point(18.2, 18).dx, point(18.2, 18).dy)
-          ..cubicTo(
-            point(20.3, 18).dx,
-            point(20.3, 18).dy,
-            point(22, 16.4).dx,
-            point(22, 16.4).dy,
-            point(22, 14.3).dx,
-            point(22, 14.3).dy,
-          )
-          ..cubicTo(
-            point(22, 12.2).dx,
-            point(22, 12.2).dy,
-            point(20.4, 10.6).dx,
-            point(20.4, 10.6).dy,
-            point(18.3, 10.6).dx,
-            point(18.3, 10.6).dy,
-          )
-          ..cubicTo(
-            point(17.5, 7.9).dx,
-            point(17.5, 7.9).dy,
-            point(15.1, 6).dx,
-            point(15.1, 6).dy,
-            point(12.2, 6).dx,
-            point(12.2, 6).dy,
-          )
-          ..cubicTo(
-            point(8.9, 6).dx,
-            point(8.9, 6).dy,
-            point(6.2, 8.5).dx,
-            point(6.2, 8.5).dy,
-            point(5.9, 11.7).dx,
-            point(5.9, 11.7).dy,
-          )
-          ..cubicTo(
-            point(3.8, 12.1).dx,
-            point(3.8, 12.1).dy,
-            point(2.2, 13.8).dx,
-            point(2.2, 13.8).dy,
-            point(2.2, 15.7).dx,
-            point(2.2, 15.7).dy,
-          )
-          ..cubicTo(
-            point(2.2, 17).dx,
-            point(2.2, 17).dy,
-            point(3.3, 18).dx,
-            point(3.3, 18).dy,
-            point(4.6, 18).dx,
-            point(4.6, 18).dy,
-          );
-        canvas.drawPath(cloud, paint);
-        canvas.drawLine(point(12, 11.6), point(12, 15.7), paint);
-        canvas.drawLine(point(9.9, 13.7), point(12, 11.6), paint);
-        canvas.drawLine(point(14.1, 13.7), point(12, 11.6), paint);
-        break;
       case _SettingsNavIconType.storage:
         canvas.drawRRect(roundedRect(3.5, 5, 17, 14), paint);
         canvas.drawLine(point(3.5, 14), point(20.5, 14), paint);
         canvas.drawCircle(point(16.8, 17), 0.55 * strokeScale, paint);
         canvas.drawCircle(point(13.8, 17), 0.55 * strokeScale, paint);
-        break;
-      case _SettingsNavIconType.chart:
-        canvas.drawLine(point(4, 20), point(20, 20), paint);
-        canvas.drawRRect(roundedRect(5.5, 12.5, 3.2, 7.5), paint);
-        canvas.drawRRect(roundedRect(10.4, 7.5, 3.2, 12.5), paint);
-        canvas.drawRRect(roundedRect(15.3, 4.5, 3.2, 15.5), paint);
         break;
       case _SettingsNavIconType.info:
         final badge = Path()..addOval(rect(4.8, 4.8, 14.4, 14.4));

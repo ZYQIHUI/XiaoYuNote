@@ -1,12 +1,8 @@
 import 'package:flutter/foundation.dart';
 
 import 'app_language.dart';
-import 'cloud_sync_config.dart';
-import 'desktop_widget_position.dart';
-import 'desktop_widget_wallpaper_settings.dart';
 import 'provider_config.dart';
 import 'structured_note_section_config.dart';
-import 'wallpaper_settings.dart';
 
 enum AppThemePreference { system, light, dark }
 
@@ -153,7 +149,6 @@ String defaultWeeklyReportPromptFor(String language) {
 
 class AppConfig {
   const AppConfig({
-    required this.wallpaperSettings,
     required this.dailyWorkHours,
     required this.dailySalary,
     required this.industry,
@@ -166,32 +161,18 @@ class AppConfig {
     required this.customDataDirectory,
     required this.kbDataDir,
     required this.autoStart,
-    required this.showUpdates,
-    required this.showDesktopWidget,
-    required this.desktopWidgetPosition,
-    required this.desktopWidgetOrbMode,
-    required this.desktopWidgetWallpaperSettings,
     required this.showTrayIcon,
     required this.closeToTray,
-    required this.memorySearchLimit,
-    required this.memoryResultMaxCharacters,
-    required this.memoryWeekDailyNoteLimit,
-    required this.memoryKeywordSearchResultLimit,
-    required this.memoryKeywordContextBefore,
-    required this.memoryKeywordContextAfter,
     required this.structuredNoteSections,
     required this.dailyMergePrompt,
     required this.globalSignPrompt,
     required this.weeklyReportPrompt,
     required this.apiLogEnabled,
-    required this.cloudSync,
     required this.providers,
     required this.defaultModels,
     required this.hotkeys,
     required this.submitShortcut,
   });
-
-  final WallpaperSettings wallpaperSettings;
 
   final double dailyWorkHours;
   final double dailySalary;
@@ -210,25 +191,13 @@ class AppConfig {
   /// 知识库索引 kb.sqlite3、业务文件区与 notes 都位于该目录。
   final String? kbDataDir;
   final bool autoStart;
-  final bool showUpdates;
-  final bool showDesktopWidget;
-  final DesktopWidgetPosition? desktopWidgetPosition;
-  final bool desktopWidgetOrbMode;
-  final DesktopWidgetWallpaperSettings desktopWidgetWallpaperSettings;
   final bool showTrayIcon;
   final bool closeToTray;
-  final double memorySearchLimit;
-  final double memoryResultMaxCharacters;
-  final double memoryWeekDailyNoteLimit;
-  final double memoryKeywordSearchResultLimit;
-  final double memoryKeywordContextBefore;
-  final double memoryKeywordContextAfter;
   final List<StructuredNoteSectionConfig> structuredNoteSections;
   final String dailyMergePrompt;
   final String globalSignPrompt;
   final String weeklyReportPrompt;
   final bool apiLogEnabled;
-  final CloudSyncConfig cloudSync;
   final List<ProviderConfig> providers;
   final Map<String, String?> defaultModels;
   final Map<String, String?> hotkeys;
@@ -251,7 +220,6 @@ class AppConfig {
   factory AppConfig.defaults() {
     final language = resolveAppLanguage('system');
     return AppConfig(
-      wallpaperSettings: WallpaperSettings.defaults,
       dailyWorkHours: 8,
       dailySalary: 200,
       industry: '互联网',
@@ -264,25 +232,13 @@ class AppConfig {
       customDataDirectory: null,
       kbDataDir: null,
       autoStart: false,
-      showUpdates: true,
-      showDesktopWidget: true,
-      desktopWidgetPosition: null,
-      desktopWidgetOrbMode: false,
-      desktopWidgetWallpaperSettings: DesktopWidgetWallpaperSettings.defaults,
       showTrayIcon: true,
       closeToTray: true,
-      memorySearchLimit: 12,
-      memoryResultMaxCharacters: 3600,
-      memoryWeekDailyNoteLimit: 31,
-      memoryKeywordSearchResultLimit: 12,
-      memoryKeywordContextBefore: 1400,
-      memoryKeywordContextAfter: 2600,
       structuredNoteSections: StructuredNoteSectionConfig.defaultsFor(language),
       dailyMergePrompt: defaultDailyMergePromptFor(language),
       globalSignPrompt: defaultGlobalSignPromptFor(language),
       weeklyReportPrompt: defaultWeeklyReportPromptFor(language),
       apiLogEnabled: false,
-      cloudSync: CloudSyncConfig.defaultsValue,
       providers: [],
       defaultModels: {
         'intelligentGenerationModel': null,
@@ -297,11 +253,6 @@ class AppConfig {
   factory AppConfig.fromJson(Map<String, Object?> json) {
     final language = resolveAppLanguage(_readLanguage(json['language']));
     return AppConfig(
-      wallpaperSettings: json['wallpaperSettings'] != null
-          ? WallpaperSettings.fromJson(
-              (json['wallpaperSettings'] as Map).cast<String, dynamic>(),
-            )
-          : WallpaperSettings.defaults,
       dailyWorkHours: _readDouble(json['dailyWorkHours'], 8),
       dailySalary: _readDouble(json['dailySalary'], 200),
       industry: json['industry'] as String? ?? '互联网',
@@ -317,44 +268,10 @@ class AppConfig {
       customDataDirectory: _readOptionalString(json['customDataDirectory']),
       kbDataDir: _readOptionalString(json['kbDataDir']),
       autoStart: json['autoStart'] as bool? ?? false,
-      showUpdates: json['showUpdates'] as bool? ?? true,
-      showDesktopWidget: json['showDesktopWidget'] as bool? ?? true,
-      desktopWidgetPosition: DesktopWidgetPosition.fromJson(
-        json['desktopWidgetPosition'],
-      ),
-      desktopWidgetOrbMode: json['desktopWidgetOrbMode'] as bool? ?? false,
-      desktopWidgetWallpaperSettings:
-          json['desktopWidgetWallpaperSettings'] != null
-          ? DesktopWidgetWallpaperSettings.fromJson(
-              (json['desktopWidgetWallpaperSettings'] as Map)
-                  .cast<String, dynamic>(),
-            )
-          : DesktopWidgetWallpaperSettings.defaults,
       showTrayIcon: json['showTrayIcon'] as bool? ?? true,
       closeToTray:
           (json['showTrayIcon'] as bool? ?? true) &&
           (json['closeToTray'] as bool? ?? true),
-      memorySearchLimit: _readDouble(json['memorySearchLimit'], 12),
-      memoryResultMaxCharacters: _readDouble(
-        json['memoryResultMaxCharacters'],
-        3600,
-      ),
-      memoryWeekDailyNoteLimit: _readDouble(
-        json['memoryWeekDailyNoteLimit'],
-        31,
-      ),
-      memoryKeywordSearchResultLimit: _readDouble(
-        json['memoryKeywordSearchResultLimit'],
-        12,
-      ),
-      memoryKeywordContextBefore: _readDouble(
-        json['memoryKeywordContextBefore'],
-        1400,
-      ),
-      memoryKeywordContextAfter: _readDouble(
-        json['memoryKeywordContextAfter'],
-        2600,
-      ),
       structuredNoteSections: StructuredNoteSectionConfig.fromJson(
         json['structuredNoteSections'],
         language: language,
@@ -372,7 +289,6 @@ class AppConfig {
         defaultWeeklyReportPromptFor(language),
       ),
       apiLogEnabled: json['apiLogEnabled'] as bool? ?? false,
-      cloudSync: CloudSyncConfig.fromJson(json['cloudSync']),
       providers: _readProviders(json['providers']),
       defaultModels: _readStringMap(
         json['defaultModels'],
@@ -385,7 +301,6 @@ class AppConfig {
 
   Map<String, Object?> toJson() {
     return {
-      'wallpaperSettings': wallpaperSettings.toJson(),
       'dailyWorkHours': dailyWorkHours,
       'dailySalary': dailySalary,
       'industry': industry,
@@ -398,19 +313,8 @@ class AppConfig {
       'customDataDirectory': customDataDirectory,
       'kbDataDir': kbDataDir,
       'autoStart': autoStart,
-      'showUpdates': showUpdates,
-      'showDesktopWidget': showDesktopWidget,
-      'desktopWidgetPosition': desktopWidgetPosition?.toJson(),
-      'desktopWidgetOrbMode': desktopWidgetOrbMode,
-      'desktopWidgetWallpaperSettings': desktopWidgetWallpaperSettings.toJson(),
       'showTrayIcon': showTrayIcon,
       'closeToTray': closeToTray,
-      'memorySearchLimit': memorySearchLimit,
-      'memoryResultMaxCharacters': memoryResultMaxCharacters,
-      'memoryWeekDailyNoteLimit': memoryWeekDailyNoteLimit,
-      'memoryKeywordSearchResultLimit': memoryKeywordSearchResultLimit,
-      'memoryKeywordContextBefore': memoryKeywordContextBefore,
-      'memoryKeywordContextAfter': memoryKeywordContextAfter,
       'structuredNoteSections': structuredNoteSections
           .map((section) => section.toJson())
           .toList(),
@@ -418,7 +322,6 @@ class AppConfig {
       'globalSignPrompt': globalSignPrompt,
       'weeklyReportPrompt': weeklyReportPrompt,
       'apiLogEnabled': apiLogEnabled,
-      'cloudSync': cloudSync.toJson(),
       'providers': providers.map((provider) => provider.toJson()).toList(),
       'defaultModels': defaultModels,
       'hotkeys': hotkeys,
@@ -427,7 +330,6 @@ class AppConfig {
   }
 
   AppConfig copyWith({
-    WallpaperSettings? wallpaperSettings,
     double? dailyWorkHours,
     double? dailySalary,
     String? industry,
@@ -440,25 +342,13 @@ class AppConfig {
     Object? customDataDirectory = _sentinel,
     Object? kbDataDir = _sentinel,
     bool? autoStart,
-    bool? showUpdates,
-    bool? showDesktopWidget,
-    Object? desktopWidgetPosition = _sentinel,
-    bool? desktopWidgetOrbMode,
-    DesktopWidgetWallpaperSettings? desktopWidgetWallpaperSettings,
     bool? showTrayIcon,
     bool? closeToTray,
-    double? memorySearchLimit,
-    double? memoryResultMaxCharacters,
-    double? memoryWeekDailyNoteLimit,
-    double? memoryKeywordSearchResultLimit,
-    double? memoryKeywordContextBefore,
-    double? memoryKeywordContextAfter,
     List<StructuredNoteSectionConfig>? structuredNoteSections,
     String? dailyMergePrompt,
     String? globalSignPrompt,
     String? weeklyReportPrompt,
     bool? apiLogEnabled,
-    CloudSyncConfig? cloudSync,
     List<ProviderConfig>? providers,
     Map<String, String?>? defaultModels,
     Map<String, String?>? hotkeys,
@@ -468,7 +358,6 @@ class AppConfig {
     final nextCloseToTray =
         nextShowTrayIcon && (closeToTray ?? this.closeToTray);
     return AppConfig(
-      wallpaperSettings: wallpaperSettings ?? this.wallpaperSettings,
       dailyWorkHours: dailyWorkHours ?? this.dailyWorkHours,
       dailySalary: dailySalary ?? this.dailySalary,
       industry: industry ?? this.industry,
@@ -485,27 +374,8 @@ class AppConfig {
           : customDataDirectory as String?,
       kbDataDir: kbDataDir == _sentinel ? this.kbDataDir : kbDataDir as String?,
       autoStart: autoStart ?? this.autoStart,
-      showUpdates: showUpdates ?? this.showUpdates,
-      showDesktopWidget: showDesktopWidget ?? this.showDesktopWidget,
-      desktopWidgetPosition: desktopWidgetPosition == _sentinel
-          ? this.desktopWidgetPosition
-          : desktopWidgetPosition as DesktopWidgetPosition?,
-      desktopWidgetOrbMode: desktopWidgetOrbMode ?? this.desktopWidgetOrbMode,
-      desktopWidgetWallpaperSettings:
-          desktopWidgetWallpaperSettings ?? this.desktopWidgetWallpaperSettings,
       showTrayIcon: nextShowTrayIcon,
       closeToTray: nextCloseToTray,
-      memorySearchLimit: memorySearchLimit ?? this.memorySearchLimit,
-      memoryResultMaxCharacters:
-          memoryResultMaxCharacters ?? this.memoryResultMaxCharacters,
-      memoryWeekDailyNoteLimit:
-          memoryWeekDailyNoteLimit ?? this.memoryWeekDailyNoteLimit,
-      memoryKeywordSearchResultLimit:
-          memoryKeywordSearchResultLimit ?? this.memoryKeywordSearchResultLimit,
-      memoryKeywordContextBefore:
-          memoryKeywordContextBefore ?? this.memoryKeywordContextBefore,
-      memoryKeywordContextAfter:
-          memoryKeywordContextAfter ?? this.memoryKeywordContextAfter,
       structuredNoteSections: structuredNoteSections == null
           ? this.structuredNoteSections
           : StructuredNoteSectionConfig.normalize(structuredNoteSections),
@@ -513,7 +383,6 @@ class AppConfig {
       globalSignPrompt: globalSignPrompt ?? this.globalSignPrompt,
       weeklyReportPrompt: weeklyReportPrompt ?? this.weeklyReportPrompt,
       apiLogEnabled: apiLogEnabled ?? this.apiLogEnabled,
-      cloudSync: cloudSync ?? this.cloudSync,
       providers: providers ?? this.providers,
       defaultModels: defaultModels ?? this.defaultModels,
       hotkeys: hotkeys ?? this.hotkeys,

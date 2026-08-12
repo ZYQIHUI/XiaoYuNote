@@ -1,15 +1,12 @@
 part of 'settings_page.dart';
 
 class _AboutPanel extends StatelessWidget {
-  const _AboutPanel({required this.updateCheckService});
-
-  final UpdateCheckService updateCheckService;
+  const _AboutPanel();
 
   static const _websiteUrl = 'https://radiant303.github.io/XiaoYuNote';
-  static const _githubUrl = 'https://github.com/Radiant303/XiaoYuNote';
+  static const _githubUrl = 'https://github.com/ZYQIHUI/XiaoYuNote';
   static const _licenseUrl =
-      'https://github.com/Radiant303/XiaoYuNote/blob/main/LICENSE';
-  static const _qqGroupUrl = 'https://qm.qq.com/q/4gWWKvwhP2';
+      'https://github.com/ZYQIHUI/XiaoYuNote/blob/main/LICENSE';
   static const _externalLinkService = ExternalLinkService();
 
   @override
@@ -60,11 +57,6 @@ class _AboutPanel extends StatelessWidget {
             const _PubspecVersionRow(),
             const _PlatformInfoRow(),
             _AboutListRow(
-              icon: _AboutRowIconType.update,
-              label: l10n(context).settingsCheckForUpdates,
-              onTap: () => _checkForUpdates(context),
-            ),
-            _AboutListRow(
               icon: _AboutRowIconType.globe,
               label: l10n(context).settingsWebsite,
               onTap: () => _externalLinkService.open(_websiteUrl),
@@ -79,55 +71,10 @@ class _AboutPanel extends StatelessWidget {
               label: l10n(context).settingsLicense,
               onTap: () => _externalLinkService.open(_licenseUrl),
             ),
-            _AboutListRow(
-              icon: _AboutRowIconType.qq,
-              label: l10n(context).settingsJoinQQGroup,
-              onTap: () => _externalLinkService.open(_qqGroupUrl),
-            ),
           ],
         ),
       ],
     );
-  }
-
-  Future<void> _checkForUpdates(BuildContext context) async {
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    messenger?.showSnackBar(
-      SnackBar(content: Text(l10n(context).settingsCheckingForUpdates)),
-    );
-    final result = await updateCheckService.check(
-      mode: UpdateCheckMode.userInitiated,
-    );
-    if (!context.mounted) {
-      return;
-    }
-    messenger?.hideCurrentSnackBar();
-    switch (result.status) {
-      case UpdateCheckStatus.updateAvailable:
-        final latest = result.latest;
-        if (latest == null) {
-          messenger?.showSnackBar(
-            SnackBar(
-              content: Text(l10n(context).settingsUpdateContentUnavailable),
-            ),
-          );
-          return;
-        }
-        await showAppUpdateDialog(
-          context: context,
-          updateCheckService: updateCheckService,
-          currentVersion: result.currentVersion,
-          latest: latest,
-        );
-      case UpdateCheckStatus.idle:
-        messenger?.showSnackBar(
-          SnackBar(content: Text(l10n(context).settingsAlreadyUpToDate)),
-        );
-      case UpdateCheckStatus.failed:
-        messenger?.showSnackBar(
-          SnackBar(content: Text(l10n(context).settingsUpdateCheckFailed)),
-        );
-    }
   }
 }
 

@@ -4,14 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:spring_note/core/models/app_config.dart';
-import 'package:spring_note/core/models/cloud_sync_config.dart';
 import 'package:spring_note/core/models/local_data_state.dart';
 import 'package:spring_note/core/models/model_config.dart';
 import 'package:spring_note/core/models/note_file.dart';
 import 'package:spring_note/core/models/provider_config.dart';
 import 'package:spring_note/core/services/ai_client_service.dart';
 import 'package:spring_note/core/services/clipboard_image_service.dart';
-import 'package:spring_note/core/services/cloud_sync_service.dart';
 import 'package:spring_note/core/services/local_data_service.dart';
 import 'package:spring_note/core/services/note_service.dart';
 import 'package:spring_note/core/services/pasted_image_service.dart';
@@ -19,7 +17,6 @@ import 'package:spring_note/core/theme/app_theme.dart';
 import 'package:spring_note/features/notes/kb_file_tree_panel.dart';
 import 'package:spring_note/features/notes/markdown_preview.dart';
 import 'package:spring_note/features/notes/notes_page.dart';
-import 'package:spring_note/src/rust/cloud_sync.dart' as rust_model;
 import 'package:leak_tracker_flutter_testing/leak_tracker_flutter_testing.dart';
 
 void main() {
@@ -380,166 +377,6 @@ final value = 1;
     expect(previewScrollController.offset, 0);
   });
 
-  testWidgets('notes page uploads dirty focused note once', (
-    WidgetTester tester,
-  ) async {
-    tester.view.physicalSize = const Size(1440, 900);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    final notePath = 'notes/daily/2026-06-18.md';
-    final noteService = _MemoryNoteService({});
-    final kbDataSource = _MemoryKbFileDataSource({notePath: '# 初始日报\n'});
-    final cloudSyncApi = _FakeCloudSyncRustApi();
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light(),
-        home: NotesPage(
-          localDataState: _cloudSyncLocalDataState,
-          noteService: noteService,
-          kbFileDataSource: kbDataSource,
-          cloudSyncService: CloudSyncService(api: cloudSyncApi),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    // 文件树默认全展开，直接点 daily 文件
-    // 展开文件树目录（默认收起）后点击文件
-    await tester.tap(find.text('notes'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('daily'));
-    await tester.pumpAndSettle();
-        await tester.tap(find.text('2026-06-18.md'));
-    await tester.pumpAndSettle();
-    await tester.pump(const Duration(seconds: 3));
-
-    expect(cloudSyncApi.uploadCalls, 0);
-
-    const edited = '# 修改后的日报\n\n自动同步这一篇。';
-    await tester.tap(find.byType(TextField).last);
-    await tester.pump();
-    await tester.enterText(find.byType(TextField).last, edited);
-    await tester.pump();
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 3));
-    await tester.pump();
-
-    expect(cloudSyncApi.uploadCalls, 1);
-    expect(
-      _normPath(cloudSyncApi.uploadRequests.single.notePath),
-      _normPath('D:\\Temp\\XiaoYuNote\\notes\\daily\\2026-06-18.md'),
-    );
-
-    await tester.pump(const Duration(seconds: 3));
-    await tester.pump();
-
-    expect(cloudSyncApi.uploadCalls, 1);
-  });
-
-  testWidgets(
-    'notes page uploads changed note once when editor loses focus',
-    skip: true,
-    (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(1440, 900);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    final notePath = 'D:\\Temp\\XiaoYuNote\\notes\\daily\\2026-06-18.md';
-    final noteService = _MemoryNoteService({notePath: '# 初始日报\n'});
-    final kbDataSource = _MemoryKbFileDataSource({
-      'notes/daily/2026-06-18.md': '# 初始日报\n',
-    });
-    final cloudSyncApi = _FakeCloudSyncRustApi();
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light(),
-        home: NotesPage(
-          localDataState: _cloudSyncLocalDataState,
-          noteService: noteService,
-          kbFileDataSource: kbDataSource,
-          cloudSyncService: CloudSyncService(api: cloudSyncApi),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    // 展开文件树目录（默认收起）后点击文件
-    await tester.tap(find.text('notes'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('daily'));
-    await tester.pumpAndSettle();
-        await tester.tap(find.text('2026-06-18.md'));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byType(TextField).last);
-    await tester.pump();
-    await tester.enterText(find.byType(TextField).last, '# 失焦同步\n');
-    await tester.pump();
-    await tester.pump();
-    expect(cloudSyncApi.uploadCalls, 0);
-
-    // 点击文件树目录（非编辑器区域）触发失焦
-    await tester.tap(find.text('notes'), warnIfMissed: false);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-    await tester.pump();
-
-    expect(cloudSyncApi.uploadCalls, 1);
-    expect(_normPath(cloudSyncApi.uploadRequests.single.notePath), _normPath(notePath));
-
-    await tester.pump(const Duration(seconds: 3));
-    await tester.pump();
-
-    expect(cloudSyncApi.uploadCalls, 1);
-  });
-
-  testWidgets('notes page skips auto upload when real-time sync is disabled', (
-    WidgetTester tester,
-  ) async {
-    tester.view.physicalSize = const Size(1440, 900);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    final noteService = _MemoryNoteService({
-      'D:\\Temp\\XiaoYuNote\\notes\\daily\\2026-06-18.md': '# 初始日报\n',
-    });
-    final kbDataSource = _MemoryKbFileDataSource({
-      'notes/daily/2026-06-18.md': '# 初始日报\n',
-    });
-    final cloudSyncApi = _FakeCloudSyncRustApi();
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light(),
-        home: NotesPage(
-          localDataState: _cloudSyncWithoutRealTimeLocalDataState,
-          noteService: noteService,
-          kbFileDataSource: kbDataSource,
-          cloudSyncService: CloudSyncService(api: cloudSyncApi),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    // 展开文件树目录（默认收起）后点击文件
-    await tester.tap(find.text('notes'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('daily'));
-    await tester.pumpAndSettle();
-        await tester.tap(find.text('2026-06-18.md'));
-    await tester.pumpAndSettle();
-
-    await tester.enterText(find.byType(TextField).last, '# 本地修改\n');
-    await tester.pump();
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 3));
-    await tester.pump();
-
-    expect(cloudSyncApi.uploadCalls, 0);
-  });
 
   testWidgets('notes editor undo restores first cursor placement', (
     WidgetTester tester,
@@ -1422,34 +1259,6 @@ final _localDataState = LocalDataState(
   config: AppConfig.defaults().copyWith(language: 'zh'),
 );
 
-final _cloudSyncLocalDataState = _localDataState.copyWith(
-  config: _localDataState.config.copyWith(
-    cloudSync: const CloudSyncConfig(
-      enabled: true,
-      serverUrl: 'https://example.com/dav/',
-      username: 'user',
-      password: 'token',
-      syncOnStartup: false,
-      realTimeSync: true,
-      lastSyncedAt: null,
-    ),
-  ),
-);
-
-final _cloudSyncWithoutRealTimeLocalDataState = _localDataState.copyWith(
-  config: _localDataState.config.copyWith(
-    cloudSync: const CloudSyncConfig(
-      enabled: true,
-      serverUrl: 'https://example.com/dav/',
-      username: 'user',
-      password: 'token',
-      syncOnStartup: false,
-      realTimeSync: false,
-      lastSyncedAt: null,
-    ),
-  ),
-);
-
 final _fimLocalDataState = LocalDataState(
   dataDirectory: 'D:\\Temp\\XiaoYuNote',
   configPath: 'D:\\Temp\\XiaoYuNote\\config.json',
@@ -1653,33 +1462,6 @@ class _MemoryKbFileDataSource implements KbFileDataSource {
   @override
   Future<void> addSource(String path) async {
     // 测试 mock：加入工作区即为可浏览根
-  }
-}
-
-class _FakeCloudSyncRustApi extends CloudSyncRustApi {
-  int uploadCalls = 0;
-  final List<rust_model.CloudSyncNoteUploadRequest> uploadRequests = [];
-
-  @override
-  Future<rust_model.CloudSyncResult> uploadNote(
-    rust_model.CloudSyncNoteUploadRequest request,
-  ) async {
-    uploadCalls++;
-    uploadRequests.add(request);
-    return const rust_model.CloudSyncResult(
-      ok: true,
-      message: 'ok',
-      uploaded: 1,
-      downloaded: 0,
-      conflicts: 0,
-      syncedAt: '2026-06-29T00:00:00+08:00',
-      errorCode: '',
-      needsDeleteConfirmation: false,
-      pendingDeleteLocal: [],
-      pendingDeleteRemote: [],
-      needsDeleteModifyConfirmation: false,
-      pendingDeleteModifyConflicts: [],
-    );
   }
 }
 

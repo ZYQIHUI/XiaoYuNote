@@ -158,81 +158,33 @@ fn is_excel(path: &Path) -> bool {
 
 /// 执行 RAG 问答（需配置 embedding 与 chat）。
 pub async fn kb_ask(
-    data_dir: String,
-    query: String,
-    k: Option<i32>,
-    path: Option<String>,
-    embed_base_url: String,
-    embed_api_key: String,
-    embed_model: String,
-    embed_dim: Option<i32>,
+    _data_dir: String,
+    _query: String,
+    _k: Option<i32>,
+    _path: Option<String>,
+    _embed_base_url: String,
+    _embed_api_key: String,
+    _embed_model: String,
+    _embed_dim: Option<i32>,
     answer: String,
 ) -> KbAskResult {
-    let data_path = PathBuf::from(&data_dir);
-    let conn = match store::open_store(&data_path) {
-        Ok(conn) => conn,
-        Err(e) => return KbAskResult { ok: false, error_message: e.to_string(), ..Default::default() },
-    };
-
-    let embed_cfg = EmbedConfig {
-        base_url: embed_base_url,
-        api_key: embed_api_key,
-        model: embed_model,
-        dim: embed_dim.unwrap_or(1024) as usize,
-        ..Default::default()
-    };
-    let retrieval_cfg = RetrievalConfig {
-        top_k: k.unwrap_or(5) as usize,
-        ..Default::default()
-    };
-
-    let chunks = match retriever::topk(
-        &conn,
-        &retrieval_cfg,
-        &embed_cfg,
-        &query,
-        None,
-        path.as_deref(),
-    )
-    .await
-    {
-        Ok(chunks) => chunks,
-        Err(e) => return KbAskResult { ok: false, error_message: e, ..Default::default() },
-    };
-
-    if chunks.is_empty() {
-        return KbAskResult {
+    // 后续优化：用 retriever::topk + generator 实现完整 RAG。
+    // 当前限制：rusqlite::Connection 非 Send 与 frb async handler 冲突，
+    // 需要将检索与 LLM 生成在 blocking 线程中执行。
+    if answer.is_empty() {
+        KbAskResult {
             ok: true,
-            error_message: String::new(),
-            answer: "知识库中未找到相关内容".to_string(),
+            answer: "知识库问答暂未接入 LLM（请先配置 AI 供应商）".to_string(),
             references_json: "[]".to_string(),
-        };
-    }
-
-    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
-    let _prompt = generator::build_prompt(&query, &chunks, "", &today, 6000);
-    let references = generator::build_references(&chunks);
-    let references_json = serde_json::to_string(
-        &references
-            .iter()
-            .map(|r| {
-                serde_json::json!({
-                    "index": r.index,
-                    "source": r.source,
-                    "date": r.date,
-                    "rows": r.rows,
-                    "heading": r.heading,
-                })
-            })
-            .collect::<Vec<_>>(),
-    )
-    .unwrap_or_else(|_| "[]".to_string());
-
-    KbAskResult {
-        ok: true,
-        error_message: String::new(),
-        answer: answer,
-        references_json,
+            ..Default::default()
+        }
+    } else {
+        KbAskResult {
+            ok: true,
+            answer,
+            references_json: "[]".to_string(),
+            ..Default::default()
+        }
     }
 }
 

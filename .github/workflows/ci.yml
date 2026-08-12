@@ -56,35 +56,10 @@ jobs:
         working-directory: spring_note/rust
         run: cargo test
 
-  sidecar-tests:
-    name: Sidecar Python Tests
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: sidecar
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: pip
-
-      - name: Install dependencies
-        run: |
-          pip install --quiet openai numpy click python-docx pymupdf openpyxl xlrd pandas tqdm \
-            fastapi uvicorn watchdog pytest httpx
-
-      - name: Run sidecar tests
-        run: pytest tests/ -q
-
   windows-build:
     name: Windows Release Build
     runs-on: windows-latest
-    needs: [flutter-checks, sidecar-tests]
+    needs: [flutter-checks]
     defaults:
       run:
         working-directory: spring_note
@@ -115,28 +90,11 @@ jobs:
           npm ci --no-audit --no-fund || npm install --no-audit --no-fund
           npm run build
 
-      - name: Package sidecar with PyInstaller
-        shell: pwsh
-        working-directory: sidecar
-        run: |
-          python -m pip install --quiet pyinstaller openai numpy click python-docx pymupdf openpyxl xlrd pandas tqdm fastapi uvicorn watchdog
-          python -m PyInstaller --noconfirm --clean --name xiaoyu-sidecar --onedir `
-            --paths "." `
-            --add-data "kb/config.toml;kb" `
-            --add-data "kb/profile.md;kb" `
-            --add-data "kb/.env.example;kb" `
-            --hidden-import kb run_sidecar.py
-          if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed." }
-
-      - name: Stage sidecar + Univer for installer
+      - name: Stage Univer for installer
         shell: pwsh
         run: |
           $releaseDir = "${{ github.workspace }}\spring_note\build\windows\x64\runner\Release"
-          Copy-Item -Recurse -Force "..\sidecar\dist\xiaoyu-sidecar" "$releaseDir\sidecar"
           Copy-Item -Recurse -Force "univer_app\dist" "$releaseDir\univer_app\dist"
-          Get-ChildItem -Recurse "$releaseDir\sidecar" | Measure-Object -Property Length -Sum | ForEach-Object {
-            Write-Host "sidecar staged: $([math]::Round($_.Sum / 1MB, 1)) MB"
-          }
 
       - name: Resolve Windows artifact metadata
         id: windows-artifact

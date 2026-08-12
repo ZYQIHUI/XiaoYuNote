@@ -6,6 +6,7 @@
 import 'ai.dart';
 import 'api/ai_api.dart';
 import 'api/cloud_sync_api.dart';
+import 'api/kb_api.dart';
 import 'api/note_image_cleanup_api.dart';
 import 'api/note_index_api.dart';
 import 'api/report_api.dart';
@@ -81,6 +82,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   FimCompleteRequest dco_decode_box_autoadd_fim_complete_request(dynamic raw);
+
+  @protected
+  int dco_decode_box_autoadd_i_32(dynamic raw);
 
   @protected
   MemoryToolChatRequest dco_decode_box_autoadd_memory_tool_chat_request(
@@ -230,6 +234,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NoteSearchResult dco_decode_note_search_result(dynamic raw);
 
   @protected
+  String? dco_decode_opt_String(dynamic raw);
+
+  @protected
+  int? dco_decode_opt_box_autoadd_i_32(dynamic raw);
+
+  @protected
   ProviderTestResult dco_decode_provider_test_result(dynamic raw);
 
   @protected
@@ -336,6 +346,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   FimCompleteRequest sse_decode_box_autoadd_fim_complete_request(
     SseDeserializer deserializer,
   );
+
+  @protected
+  int sse_decode_box_autoadd_i_32(SseDeserializer deserializer);
 
   @protected
   MemoryToolChatRequest sse_decode_box_autoadd_memory_tool_chat_request(
@@ -519,6 +532,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NoteSearchResult sse_decode_note_search_result(SseDeserializer deserializer);
 
   @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
+  int? sse_decode_opt_box_autoadd_i_32(SseDeserializer deserializer);
+
+  @protected
   ProviderTestResult sse_decode_provider_test_result(
     SseDeserializer deserializer,
   );
@@ -650,6 +669,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     FimCompleteRequest self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_box_autoadd_i_32(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_memory_tool_chat_request(
@@ -884,6 +906,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     NoteSearchResult self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_i_32(int? self, SseSerializer serializer);
 
   @protected
   void sse_encode_provider_test_result(

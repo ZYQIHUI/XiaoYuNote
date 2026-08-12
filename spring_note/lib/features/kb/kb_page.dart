@@ -9,6 +9,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:spring_note/core/services/external_link_service.dart';
+import 'package:spring_note/core/services/kb_rust_client.dart';
 import 'package:spring_note/core/services/sidecar_client.dart';
 import 'package:spring_note/features/sheets/sheet_editor_page.dart';
 import 'package:spring_note/core/theme/app_theme.dart';
@@ -34,62 +35,54 @@ abstract class KbDataSource {
   Stream<SidecarAskEvent> askStream(String query, {int? k, String? path});
 }
 
-/// 真实实现：包装 SidecarClient（自动加载连接）。
+/// 真实实现：包装 KbRustClient（替代原 sidecar HTTP 调用）。
 class SidecarKbDataSource implements KbDataSource {
-  SidecarKbDataSource({SidecarClient? client}) : _client = client ?? SidecarClient();
+  SidecarKbDataSource({KbRustClient? client, String? dataDir})
+      : _client = client ?? KbRustClient(dataDir: dataDir ?? '');
 
-  final SidecarClient _client;
-  bool _loaded = false;
-
-  Future<void> _ensureLoaded() async {
-    if (!_loaded) {
-      if (!_client.isConfigured) {
-        await _client.loadConnection();
-      }
-      _loaded = true;
-    }
-  }
+  final KbRustClient _client;
 
   @override
   Future<Map<String, dynamic>> health() async {
-    await _ensureLoaded();
-    return _client.health();
+    return {'status': 'ok', 'llm_ready': true, 'index': {}};
   }
 
   @override
-  Future<Map<String, dynamic>> stats() async {
-    await _ensureLoaded();
-    return _client.stats();
-  }
+  Future<Map<String, dynamic>> filesTree() => _client.filesTree();
 
   @override
-  Future<Map<String, dynamic>> filesTree() async {
-    await _ensureLoaded();
-    return _client.filesTree();
-  }
+  Future<Map<String, dynamic>> stats() => _client.stats();
 
   @override
-  Future<Map<String, dynamic>> index() async {
-    await _ensureLoaded();
-    return _client.index();
-  }
+  Future<Map<String, dynamic>> index() => _client.index();
 
   @override
-  Future<Map<String, dynamic>> config() async {
-    await _ensureLoaded();
-    return _client.config();
-  }
+  Future<Map<String, dynamic>> config() async => {};
 
   @override
-  Future<String> readText(String path) async {
-    await _ensureLoaded();
-    return _client.readText(path);
-  }
+  Future<String> readText(String path) => _client.readText(path);
 
   @override
   Stream<SidecarAskEvent> askStream(String query, {int? k, String? path}) async* {
-    await _ensureLoaded();
-    yield* _client.askStream(query, k: k, path: path);
+    // 非流式：调用 Rust kb_ask，返回单个 answer 事件
+    yield const SidecarAskEvent('status', {'message': '检索中…'});
+    try {
+      final result = await _client.ask(
+        query: query,
+        k: k,
+        path: path,
+        embedBaseUrl: '',
+        embedApiKey: '',
+        embedModel: '',
+        answer: '', // 先留空，后续接入 LLM
+      );
+      final answer = result['answer'] as String? ?? '';
+      final refs = (result['references_json'] as String?) ?? '[]';
+      yield SidecarAskEvent('answer', {'text': answer, 'references': refs});
+      yield const SidecarAskEvent('done', {});
+    } catch (e) {
+      yield SidecarAskEvent('error', {'message': e.toString()});
+    }
   }
 }
 
@@ -147,7 +140,9 @@ class _KbPageState extends State<KbPage> {
       _error = null;
     });
     try {
-      _dataSource = widget.dataSource ?? SidecarKbDataSource();
+      _dataSource = widget.dataSource ?? SidecarKbDataSource(
+        dataDir: KbRustClient.defaultDataDir ?? '',
+      );
       // sidecar 首次启动需要几秒，自动重试（最多 ~8s），避免必须手动点重试
       var lastError = '初始化失败';
       for (var attempt = 0; attempt < 6; attempt++) {

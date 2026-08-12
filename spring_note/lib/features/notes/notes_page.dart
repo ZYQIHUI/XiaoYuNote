@@ -12,6 +12,7 @@ import '../../core/models/note_external_update.dart';
 import '../../core/models/note_file.dart';
 import '../../core/services/ai_client_service.dart';
 import '../../core/services/clipboard_image_service.dart';
+import '../../core/services/kb_rust_client.dart';
 import '../../core/services/local_data_service.dart';
 import '../../core/services/note_service.dart';
 import '../../core/services/pasted_image_service.dart';
@@ -573,7 +574,9 @@ class _NotesPageState extends State<NotesPage> {
     final ds = _kbDataSource;
     if (ds == null) {
       // 无注入数据源时，用真实 SidecarKbFileDataSource
-      _kbRealDataSource ??= SidecarKbFileDataSource();
+      _kbRealDataSource ??= SidecarKbFileDataSource(
+        dataDir: KbRustClient.defaultDataDir ?? '',
+      );
     }
     final source = ds ?? _kbRealDataSource;
     if (source == null) return;
@@ -1078,7 +1081,9 @@ class _NotesPageState extends State<NotesPage> {
       builder: (ctx) => KbAskDialog(
         question: selected,
         controller: _editorController,
-        dataSource: widget.kbDataSource ?? SidecarKbDataSource(),
+        dataSource: widget.kbDataSource ?? SidecarKbDataSource(
+          dataDir: KbRustClient.defaultDataDir ?? '',
+        ),
       ),
     );
   }

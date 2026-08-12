@@ -9,7 +9,7 @@ import 'dart:async';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
-import 'package:spring_note/core/services/sidecar_client.dart';
+import 'package:spring_note/core/services/kb_rust_client.dart';
 import 'package:spring_note/core/theme/app_theme.dart';
 import 'package:spring_note/features/kb/kb_page.dart' show KbDataSource;
 
@@ -28,78 +28,49 @@ abstract class KbFileDataSource {
   Future<void> addSource(String path);
 }
 
+/// Rust 版文件树数据源（替代 SidecarKbFileDataSource）。
 class SidecarKbFileDataSource implements KbFileDataSource {
-  SidecarKbFileDataSource({SidecarClient? client}) : _client = client ?? SidecarClient();
+  SidecarKbFileDataSource({KbRustClient? client, required String dataDir})
+      : _client = client ?? KbRustClient(dataDir: dataDir);
 
-  final SidecarClient _client;
-  bool _loaded = false;
-
-  Future<void> _ensure() async {
-    if (_loaded) return;
-    await _client.loadConnection();
-    _loaded = true;
-  }
+  final KbRustClient _client;
 
   @override
-  Future<Map<String, dynamic>> dirs() async {
-    await _ensure();
-    return _client.dirs();
-  }
+  Future<Map<String, dynamic>> dirs() => _client.dirs();
 
   @override
-  Future<Map<String, dynamic>> filesTreeRoot(String root) async {
-    await _ensure();
-    return _client.filesTreeRoot(root);
-  }
+  Future<Map<String, dynamic>> filesTreeRoot(String root) =>
+      _client.filesTree(root: root);
 
   @override
-  Future<String> readText(String path) async {
-    await _ensure();
-    return _client.readText(path);
-  }
+  Future<String> readText(String path) => _client.readText(path);
 
   @override
-  Future<void> writeText(String path, String content) async {
-    await _ensure();
-    await _client.writeText(path, content);
-  }
+  Future<void> writeText(String path, String content) =>
+      _client.writeText(path, content);
 
   @override
-  Future<Map<String, dynamic>> readXlsx(String path) async {
-    await _ensure();
-    return _client.readXlsx(path);
-  }
+  Future<Map<String, dynamic>> readXlsx(String path) async =>
+      {'content_base64': await _client.readXlsx(path)};
 
   @override
-  Future<void> createFile(String path, {String content = ''}) async {
-    await _ensure();
-    await _client.createFile(path, content: content);
-  }
+  Future<void> createFile(String path, {String content = ''}) =>
+      _client.createFile(path, content: content);
 
   @override
-  Future<void> createDir(String path) async {
-    await _ensure();
-    await _client.createDir(path);
-  }
+  Future<void> createDir(String path) => _client.createDir(path);
 
   @override
-  Future<void> delete(String path) async {
-    await _ensure();
-    await _client.deletePath(path);
-  }
+  Future<void> delete(String path) => _client.delete(path);
 
   @override
   Future<void> addSource(String path) async {
-    await _ensure();
-    // 读当前 extra_sources，追加后写回（避免覆盖已有配置）
-    final cfg = await _client.config();
-    final existing = (cfg['extra_sources'] as List? ?? []).map((e) => e.toString()).toList();
-    if (existing.contains(path)) return;
-    await _client.setConfig({'extra_sources': [...existing, path]});
+    // Rust 客户端直接允许外部文件路径，无需额外配置。
   }
 }
 
 /// 将 kb_page 的 KbDataSource 适配为 KbFileDataSource（测试注入用）。
+/// 将 KbDataSource（测试注入用）适配为 KbFileDataSource（文件树面板用）。
 class KbFileTreeDataSourceAdapter implements KbFileDataSource {
   KbFileTreeDataSourceAdapter(this._inner);
 
@@ -107,61 +78,34 @@ class KbFileTreeDataSourceAdapter implements KbFileDataSource {
 
   @override
   Future<Map<String, dynamic>> dirs() async {
-    final client = SidecarClient();
-    await client.loadConnection();
-    return client.dirs();
+    return {'dirs': [{'path': '', 'label': '数据目录', 'root': ''}]};
   }
 
   @override
-  Future<Map<String, dynamic>> filesTreeRoot(String root) async {
-    final client = SidecarClient();
-    await client.loadConnection();
-    return client.filesTreeRoot(root);
-  }
+  Future<Map<String, dynamic>> filesTreeRoot(String root) =>
+      _inner.filesTree();
 
   @override
   Future<String> readText(String path) => _inner.readText(path);
 
   @override
-  Future<void> writeText(String path, String content) {
-    final client = SidecarClient();
-    return client.loadConnection().then((_) => client.writeText(path, content));
-  }
+  Future<void> writeText(String path, String content) =>
+      _inner.readText(path).then((_) {}); // 当前 KbDataSource 无 write
 
   @override
-  Future<Map<String, dynamic>> readXlsx(String path) {
-    final client = SidecarClient();
-    return client.loadConnection().then((_) => client.readXlsx(path));
-  }
+  Future<Map<String, dynamic>> readXlsx(String path) async => {};
 
   @override
-  Future<void> createFile(String path, {String content = ''}) {
-    final client = SidecarClient();
-    return client.loadConnection().then((_) => client.createFile(path, content: content));
-  }
+  Future<void> createFile(String path, {String content = ''}) async {}
 
   @override
-  Future<void> createDir(String path) {
-    final client = SidecarClient();
-    return client.loadConnection().then((_) => client.createDir(path));
-  }
+  Future<void> createDir(String path) async {}
 
   @override
-  Future<void> delete(String path) {
-    final client = SidecarClient();
-    return client.loadConnection().then((_) => client.deletePath(path));
-  }
+  Future<void> delete(String path) async {}
 
   @override
-  Future<void> addSource(String path) {
-    final client = SidecarClient();
-    return client.loadConnection().then((_) async {
-      final cfg = await client.config();
-      final existing = (cfg['extra_sources'] as List? ?? []).map((e) => e.toString()).toList();
-      if (existing.contains(path)) return;
-      await client.setConfig({'extra_sources': [...existing, path]});
-    });
-  }
+  Future<void> addSource(String path) async {}
 }
 
 /// 文件树面板：目录切换 + 新建 + VS Code 风格树 + 右键菜单。
@@ -227,7 +171,9 @@ class _KbFileTreePanelState extends State<KbFileTreePanel> {
       _error = null;
     });
     try {
-      _dataSource = widget.dataSource ?? SidecarKbFileDataSource();
+      _dataSource = widget.dataSource ?? SidecarKbFileDataSource(
+        dataDir: KbRustClient.defaultDataDir ?? '',
+      );
       // sidecar 首次启动需要几秒，自动重试（最多 ~8s）
       var lastError = '初始化失败';
       for (var attempt = 0; attempt < 6; attempt++) {

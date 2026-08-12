@@ -9,9 +9,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/models/app_config.dart';
 import 'core/models/local_data_state.dart';
 import 'core/router/app_shell.dart';
+import 'core/services/kb_rust_client.dart';
 import 'core/services/local_data_service.dart';
 import 'core/services/note_service.dart';
-import 'core/services/sidecar_lifecycle.dart';
 import 'core/services/stats_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/app_window_frame.dart';
@@ -42,10 +42,9 @@ class _XiaoYuNoteAppState extends State<XiaoYuNoteApp> {
   @override
   void initState() {
     super.initState();
-    // 桌面退出时清理 sidecar 子进程
+    // 应用退出时直接退出（sidecar 已移除）
     _lifecycleListener = AppLifecycleListener(
       onExitRequested: () async {
-        await SidecarLifecycle.instance.stop();
         return AppExitResponse.exit;
       },
     );
@@ -60,12 +59,9 @@ class _XiaoYuNoteAppState extends State<XiaoYuNoteApp> {
   Future<LocalDataState> _initialize() async {
     final state = await widget.localDataService.initialize();
     await widget.statsService.recordAppStartup(appDataDir: state.dataDirectory);
-    // 数据目录就绪后再启动 sidecar，注入知识库位置（测试环境不 spawn 真实进程）
+    // 设置 Rust 知识库数据目录（替代原 sidecar 启动）
     if (!Platform.environment.containsKey('FLUTTER_TEST')) {
-      SidecarLifecycle.instance
-        ..dataDirectory = state.dataDirectory
-        ..kbDataDir = state.config.kbDataDir;
-      unawaited(SidecarLifecycle.instance.start());
+      KbRustClient.defaultDataDir = state.dataDirectory;
     }
     if (mounted) {
       setState(() => _config = state.config);

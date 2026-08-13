@@ -32,6 +32,9 @@ pub struct KbStats {
 pub struct KbTreeEntry {
     pub name: String,
     pub path: String,
+    /// Flutter 端按 `type` 字段判断 dir/file（sidecar 时代格式，缺失默认 'dir'）。
+    #[serde(rename = "type")]
+    pub type_name: String,
     pub is_dir: bool,
     pub size: i64,
     pub children: Vec<KbTreeEntry>,
@@ -39,10 +42,24 @@ pub struct KbTreeEntry {
 
 impl KbTreeEntry {
     fn dir(name: &str, path: &str) -> Self {
-        Self { name: name.to_string(), path: path.to_string(), is_dir: true, size: 0, children: Vec::new() }
+        Self {
+            name: name.to_string(),
+            path: path.to_string(),
+            type_name: "dir".to_string(),
+            is_dir: true,
+            size: 0,
+            children: Vec::new(),
+        }
     }
     fn file(name: &str, path: &str, size: i64) -> Self {
-        Self { name: name.to_string(), path: path.to_string(), is_dir: false, size, children: Vec::new() }
+        Self {
+            name: name.to_string(),
+            path: path.to_string(),
+            type_name: "file".to_string(),
+            is_dir: false,
+            size,
+            children: Vec::new(),
+        }
     }
 }
 

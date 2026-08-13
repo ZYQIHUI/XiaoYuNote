@@ -15,8 +15,10 @@ import 'core/services/note_service.dart';
 import 'core/services/stats_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/app_window_frame.dart';
+import 'features/sheets/sheet_editor_page.dart' show univerServerBaseUrl;
 import 'l10n/app_localizations.dart';
 import 'l10n/l10n.dart';
+import 'src/rust/api/kb_api.dart' as kb_api;
 
 class XiaoYuNoteApp extends StatefulWidget {
   const XiaoYuNoteApp({
@@ -62,6 +64,15 @@ class _XiaoYuNoteAppState extends State<XiaoYuNoteApp> {
     // 设置 Rust 知识库数据目录（替代原 sidecar 启动）
     if (!Platform.environment.containsKey('FLUTTER_TEST')) {
       KbRustClient.defaultDataDir = state.dataDirectory;
+      // 预启动 Univer 静态服务器（ES module 需 http://，file:// 会被 CORS 拦截）
+      try {
+        final base = await kb_api.kbStartUniverServer();
+        if (base.isNotEmpty) {
+          univerServerBaseUrl = base;
+        }
+      } catch (_) {
+        // 服务器启动失败不影响主流程，表格页会回退 file://
+      }
     }
     if (mounted) {
       setState(() => _config = state.config);

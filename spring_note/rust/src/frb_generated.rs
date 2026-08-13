@@ -38,7 +38,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -2000069710;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -927657386;
 
 // Section: executor
 
@@ -718,6 +718,39 @@ fn wire__crate__api__kb_api__kb_sheets_impl(
                         api_path,
                         api_top_n,
                     ))?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__kb_api__kb_start_univer_server_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "kb_start_univer_server",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let output_ok =
+                        Result::<_, ()>::Ok(crate::api::kb_api::kb_start_univer_server())?;
                     Ok(output_ok)
                 })())
             }
@@ -2588,90 +2621,93 @@ fn pde_ffi_dispatcher_primary_impl(
         15 => wire__crate__api__kb_api__kb_read_text_impl(port, ptr, rust_vec_len, data_len),
         16 => wire__crate__api__kb_api__kb_read_xlsx_impl(port, ptr, rust_vec_len, data_len),
         17 => wire__crate__api__kb_api__kb_sheets_impl(port, ptr, rust_vec_len, data_len),
-        18 => wire__crate__api__kb_api__kb_write_text_impl(port, ptr, rust_vec_len, data_len),
-        19 => wire__crate__api__kb_api__kb_write_xlsx_impl(port, ptr, rust_vec_len, data_len),
-        20 => wire__crate__api__note_index_api__list_indexed_notes_impl(
+        18 => {
+            wire__crate__api__kb_api__kb_start_univer_server_impl(port, ptr, rust_vec_len, data_len)
+        }
+        19 => wire__crate__api__kb_api__kb_write_text_impl(port, ptr, rust_vec_len, data_len),
+        20 => wire__crate__api__kb_api__kb_write_xlsx_impl(port, ptr, rust_vec_len, data_len),
+        21 => wire__crate__api__note_index_api__list_indexed_notes_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        21 => wire__crate__api__note_index_api__load_note_content_impl(
+        22 => wire__crate__api__note_index_api__load_note_content_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        22 => wire__crate__api__ai_api__memory_tool_chat_impl(port, ptr, rust_vec_len, data_len),
-        23 => wire__crate__api__ai_api__memory_tool_chat_stream_impl(
+        23 => wire__crate__api__ai_api__memory_tool_chat_impl(port, ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__ai_api__memory_tool_chat_stream_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        24 => wire__crate__api__ai_api__merge_daily_note_impl(port, ptr, rust_vec_len, data_len),
-        25 => {
+        25 => wire__crate__api__ai_api__merge_daily_note_impl(port, ptr, rust_vec_len, data_len),
+        26 => {
             wire__crate__api__stats_api__record_app_startup_impl(port, ptr, rust_vec_len, data_len)
         }
-        26 => wire__crate__api__stats_api__record_home_generation_impl(
+        27 => wire__crate__api__stats_api__record_home_generation_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        27 => wire__crate__api__stats_api__record_work_time_impl(port, ptr, rust_vec_len, data_len),
-        28 => wire__crate__api__note_index_api__refresh_note_index_impl(
+        28 => wire__crate__api__stats_api__record_work_time_impl(port, ptr, rust_vec_len, data_len),
+        29 => wire__crate__api__note_index_api__refresh_note_index_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        29 => {
+        30 => {
             wire__crate__api__report_api__regenerate_report_impl(port, ptr, rust_vec_len, data_len)
         }
-        30 => wire__crate__api__note_image_cleanup_api__scan_note_images_impl(
+        31 => wire__crate__api__note_image_cleanup_api__scan_note_images_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        31 => wire__crate__api__note_index_api__search_all_indexed_notes_impl(
+        32 => wire__crate__api__note_index_api__search_all_indexed_notes_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        32 => wire__crate__api__note_index_api__search_indexed_notes_impl(
+        33 => wire__crate__api__note_index_api__search_indexed_notes_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        33 => wire__crate__api__note_index_api__search_indexed_notes_by_kind_impl(
+        34 => wire__crate__api__note_index_api__search_indexed_notes_by_kind_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        34 => wire__crate__api__cloud_sync_api__sync_web_dav_notes_impl(
+        35 => wire__crate__api__cloud_sync_api__sync_web_dav_notes_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        35 => wire__crate__api__ai_api__test_provider_connection_impl(
+        36 => wire__crate__api__ai_api__test_provider_connection_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        36 => wire__crate__api__cloud_sync_api__test_web_dav_connection_impl(
+        37 => wire__crate__api__cloud_sync_api__test_web_dav_connection_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        37 => wire__crate__api__cloud_sync_api__upload_web_dav_note_impl(
+        38 => wire__crate__api__cloud_sync_api__upload_web_dav_note_impl(
             port,
             ptr,
             rust_vec_len,

@@ -19,5 +19,6 @@ pub mod kb;
 pub mod parser;
 pub mod retriever;
 pub mod scanner;
+pub mod server;
 pub mod store;
 pub mod utils;

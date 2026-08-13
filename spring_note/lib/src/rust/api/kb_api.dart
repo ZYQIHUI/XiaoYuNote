@@ -6,6 +6,10 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+/// 启动 Univer 静态服务器，返回 "http://127.0.0.1:PORT"（失败返回空串）。
+Future<String> kbStartUniverServer() =>
+    RustLib.instance.api.crateApiKbApiKbStartUniverServer();
+
 /// 文件树（root 为空 = 数据目录根），返回 JSON 字符串。
 Future<String> kbFilesTreeJson({required String dataDir, String? root}) =>
     RustLib.instance.api.crateApiKbApiKbFilesTreeJson(

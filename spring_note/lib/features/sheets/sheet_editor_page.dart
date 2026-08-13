@@ -12,8 +12,14 @@ import 'package:spring_note/core/theme/app_theme.dart';
 import 'package:spring_note/features/sheets/univer_sheet_widget.dart';
 
 /// Univer 前端入口。
-/// 从本地 file:// 加载（Rust 已内置，无 sidecar HTTP 服务）。
+/// 用 Rust 内置静态 HTTP 服务器托管（ES module 需要 http:// 协议，
+/// file:// 会被浏览器 CORS 拦截）。服务器在 app 启动时预启动（见 app.dart），
+/// 这里只读取缓存 URL；未就绪时回退 file://（可能因 CORS 失败）。
 String defaultUniverHtmlUrl() {
+  final base = univerServerBaseUrl;
+  if (base != null && base.isNotEmpty) {
+    return '$base/index.html';
+  }
   final exeDir = File(Platform.resolvedExecutable).parent.path;
   final bundled =
       '$exeDir${Platform.pathSeparator}univer_app${Platform.pathSeparator}dist${Platform.pathSeparator}index.html';
@@ -23,6 +29,9 @@ String defaultUniverHtmlUrl() {
   final dev = 'D:/XiaoYu/XiaoYuNote/spring_note/univer_app/dist/index.html';
   return 'file:///$dev';
 }
+
+/// Rust 静态服务器缓存 URL（app 启动时设置）。
+String? univerServerBaseUrl;
 
 class SheetEditorPage extends StatefulWidget {
   const SheetEditorPage({

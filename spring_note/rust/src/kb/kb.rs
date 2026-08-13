@@ -435,6 +435,42 @@ fn base64_decode(s: &str) -> Result<Vec<u8>, String> {
     Ok(bytes)
 }
 
+// ------------------------------------------------------------------
+// Univer 静态服务器
+// ------------------------------------------------------------------
+
+/// 定位 univer_app/dist 目录：exe 同级 > 开发目录。
+pub fn locate_univer_dist() -> Option<PathBuf> {
+    // 1) exe 同级（打包后 CI 复制到 Release/univer_app/dist）
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|p| p.to_path_buf()));
+    if let Some(dir) = exe_dir {
+        let bundled = dir.join("univer_app").join("dist");
+        if bundled.is_dir() {
+            return Some(bundled);
+        }
+    }
+    // 2) 开发目录
+    let dev = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap_or(Path::new("."))
+        .join("univer_app")
+        .join("dist");
+    if dev.is_dir() {
+        return Some(dev);
+    }
+    None
+}
+
+/// 启动 Univer 静态服务器，返回 "http://127.0.0.1:PORT"（失败返回空串）。
+pub fn kb_start_univer_server() -> String {
+    match locate_univer_dist() {
+        Some(dir) => super::server::start_static_server(&dir.to_string_lossy()),
+        None => String::new(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

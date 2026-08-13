@@ -79,9 +79,9 @@ function createUniver() {
   try {
     const configService = univer.__getInjector().get('univer.config-service');
     if (configService && configService.setConfig) {
-      configService.setConfig('DEFAULT_WORKSHEET_COLUMN_COUNT', 300);
-      configService.setConfig('DEFAULT_WORKSHEET_ROW_COUNT', 500);
-      configService.setConfig('DEFAULT_WORKSHEET_COLUMN_WIDTH', 36);
+      configService.setConfig('DEFAULT_WORKSHEET_COLUMN_COUNT', 100);
+      configService.setConfig('DEFAULT_WORKSHEET_ROW_COUNT', 100);
+      configService.setConfig('DEFAULT_WORKSHEET_COLUMN_WIDTH', 60);
     }
   } catch (err) {
     // 配置失败不阻塞
@@ -163,8 +163,8 @@ function toUniverData(workbook) {
         let w = col && col.width;
         if (typeof w === 'object' && w !== null && 'w' in w) w = w.w;
         if (typeof w === 'number' && isFinite(w) && w > 0) {
-          columnData[idx + 1] = { w: Math.max(w, 0) };
-          maxCol = Math.max(maxCol, idx + 1);
+          // Excel 列宽单位 ≈ 字符数；Univer 用 px，约乘 7 换算，至少 40px
+          columnData[idx + 1] = { w: Math.max(Math.min(w * 7, 300), 40) };
         }
       });
     } catch (e) { /* 无列信息 */ }
@@ -208,15 +208,19 @@ function toUniverData(workbook) {
       id: sheetId,
       name,
       // Univer 0.25 用 columnCount/rowCount（不是 colCount）
-      // 按数据 + 余量扩展，默认 300 列 / 500 行（覆盖宽表）
-      rowCount: Math.max(maxRow + 50, 500),
-      columnCount: Math.max(maxCol + 30, 300),
-      // 默认列宽缩小，让视口显示更多列（Univer 默认 88px 太宽）
-      defaultColumnWidth: 36,
+      // 按数据列 + 余量扩展（上限 300），避免空列太多导致视口定位偏差
+      rowCount: Math.max(maxRow + 20, 100),
+      columnCount: Math.min(Math.max(maxCol + 20, 30), 300),
+      // 默认列宽：60px 适中（Univer 默认 88px 偏宽、36px 偏窄）
+      defaultColumnWidth: 60,
       defaultRowHeight: 24,
       cellData,
     };
     if (mergeData.length) sheet.mergeData = mergeData;
+    // 补全列宽：数据列若未显式设宽，用默认 60px（避免某些 xlsx 无 <col> 定义时列宽异常）
+    for (let c = 1; c <= maxCol; c++) {
+      if (!columnData[c]) columnData[c] = { w: 60 };
+    }
     if (Object.keys(columnData).length) sheet.columnData = columnData;
     if (Object.keys(rowData).length) sheet.rowData = rowData;
     sheets[sheetId] = sheet;
@@ -296,7 +300,7 @@ window.univerBridge = {
         name: '工作表',
         sheetOrder: ['sheet-1'],
         sheets: {
-          'sheet-1': { id: 'sheet-1', name: 'Sheet1', rowCount: 500, columnCount: 300, defaultColumnWidth: 36, cellData: {} },
+          'sheet-1': { id: 'sheet-1', name: 'Sheet1', rowCount: 100, columnCount: 100, defaultColumnWidth: 60, cellData: {} },
         },
       });
     }

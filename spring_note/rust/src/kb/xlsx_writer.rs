@@ -70,33 +70,41 @@ fn build_sheet_xml(cells: &[(usize, usize, String)], _max_row: usize, max_col: u
     xml.push_str(
         "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">",
     );
-    // 列定义（前 26 列设默认宽，让前端显示更多列）
+    // 列定义：为数据列设合理宽度（Excel 宽度单位 ≈ 字符数），避免打开时列宽过窄
     xml.push_str("<cols>");
-    for i in 1..=max_col.min(26) {
-        xml.push_str(&format!("<col min=\"{i}\" max=\"{i}\" width=\"9\" customWidth=\"1\"/>"));
+    for i in 1..=max_col {
+        xml.push_str(&format!("<col min=\"{i}\" max=\"{i}\" width=\"11\" customWidth=\"1\"/>"));
     }
     xml.push_str("</cols>");
+    // 按行分组：同一行的所有单元格必须放在同一个 <row> 标签内（否则非法 xlsx）
     xml.push_str("<sheetData>");
+    let mut row_groups: std::collections::BTreeMap<usize, Vec<(usize, &str)>> =
+        std::collections::BTreeMap::new();
     for (row, col, value) in cells {
-        let cell_ref = format!("{}{}", col_letter(*col - 1), row);
-        // 纯数字 → 数值单元格；否则字符串（inlineStr 避免共享字符串表）
-        if let Ok(num) = value.parse::<f64>() {
-            let formatted = if num.fract() == 0.0 && value.contains('.') {
-                format!("{num}")
-            } else if num.fract() == 0.0 {
-                format!("{}", num as i64)
+        row_groups.entry(*row).or_default().push((*col, value));
+    }
+    for (row, row_cells) in row_groups {
+        xml.push_str(&format!("<row r=\"{row}\">"));
+        for (col, value) in row_cells {
+            let cell_ref = format!("{}{}", col_letter(col - 1), row);
+            // 纯数字 → 数值单元格；否则字符串（inlineStr 避免共享字符串表）
+            if let Ok(num) = value.parse::<f64>() {
+                let formatted = if num.fract() == 0.0 {
+                    format!("{}", num as i64)
+                } else {
+                    format!("{num}")
+                };
+                xml.push_str(&format!(
+                    "<c r=\"{cell_ref}\"><v>{formatted}</v></c>"
+                ));
             } else {
-                format!("{num}")
-            };
-            xml.push_str(&format!(
-                "<row r=\"{row}\"><c r=\"{cell_ref}\"><v>{formatted}</v></c></row>"
-            ));
-        } else {
-            let escaped = xml_escape(value);
-            xml.push_str(&format!(
-                "<row r=\"{row}\"><c r=\"{cell_ref}\" t=\"inlineStr\"><is><t>{escaped}</t></is></c></row>"
-            ));
+                let escaped = xml_escape(value);
+                xml.push_str(&format!(
+                    "<c r=\"{cell_ref}\" t=\"inlineStr\"><is><t>{escaped}</t></is></c>"
+                ));
+            }
         }
+        xml.push_str("</row>");
     }
     xml.push_str("</sheetData></worksheet>");
     xml
@@ -236,9 +244,30 @@ mod tests {
 
     #[test]
     fn builds_minimal_xlsx() {
+        // 多行多列：同一行多个单元格必须在同一个 <row> 内
+        let cells = vec![
+            (1, 1, "姓名".to_string()),
+            (1, 2, "部门".to_string()),
+            (1, 3, "金额".to_string()),
+            (2, 1, "张三".to_string()),
+            (2, 2, "研发".to_string()),
+            (2, 3, "100.5".to_string()),
+        ];
+        let sheet_xml = build_sheet_xml(&cells, 500, 150);
+        // 每个 row 只出现一次，且含多个 <c>
+        let row1_count = sheet_xml.matches("<row r=\"1\">").count();
+        let row2_count = sheet_xml.matches("<row r=\"2\">").count();
+        assert_eq!(row1_count, 1, "row 1 应只出现一次");
+        assert_eq!(row2_count, 1, "row 2 应只出现一次");
+        assert!(sheet_xml.contains("<row r=\"1\"><c r=\"A1\""), "A1 在 row1 内");
+        assert!(sheet_xml.contains("<c r=\"C1\""), "C1 在 row1 内");
+        assert!(sheet_xml.contains("<c r=\"B2\""), "B2 在 row2 内");
+        // 列宽合理（> 9）
+        assert!(sheet_xml.contains("width=\"11\""), "列宽应为 11");
+
         let bytes = build_xlsx_archive(
             &[("Sheet1".to_string(), "sheet0".to_string())],
-            &[build_sheet_xml(&[(1, 1, "42".to_string())], 500, 150)],
+            &[sheet_xml],
         )
         .unwrap();
         // zip 应包含关键部件

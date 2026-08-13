@@ -32,6 +32,7 @@ class ProviderConfig {
     'Ollama',
     'Google',
     'Claude',
+    '自定义',
   ];
 
   factory ProviderConfig.fromJson(Map<String, Object?> json) {
@@ -54,6 +55,19 @@ class ProviderConfig {
       RegExp(r'[^a-z0-9]+'),
       '',
     );
+    // 自定义 OpenAI 兼容供应商（完全手动填写）
+    if (normalized == '自定义' || normalized == 'custom') {
+      return ProviderConfig(
+        id: _makeId('自定义'),
+        enabled: true,
+        name: '自定义',
+        protocol: 'openaiCompatible',
+        apiKey: '',
+        baseUrl: 'https://',
+        apiPath: '/chat/completions',
+        models: const [],
+      );
+    }
     if (normalized == 'google' || normalized == 'gemini') {
       return ProviderConfig(
         id: _makeId('Google'),

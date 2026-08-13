@@ -63,7 +63,7 @@ class _XiaoYuNoteAppState extends State<XiaoYuNoteApp> {
     await widget.statsService.recordAppStartup(appDataDir: state.dataDirectory);
     // 设置 Rust 知识库数据目录（替代原 sidecar 启动）
     if (!Platform.environment.containsKey('FLUTTER_TEST')) {
-      KbRustClient.defaultDataDir = state.dataDirectory;
+      KbRustClient.updateDataDir(state.dataDirectory, kb: state.config.kbDataDir);
       // 预启动 Univer 静态服务器（ES module 需 http://，file:// 会被 CORS 拦截）
       try {
         final base = await kb_api.kbStartUniverServer();

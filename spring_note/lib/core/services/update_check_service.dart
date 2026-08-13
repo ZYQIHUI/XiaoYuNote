@@ -168,7 +168,7 @@ class UpdateCheckService {
 
   static const _timeout = Duration(seconds: 10);
   static const _defaultUpdateBaseUrl =
-      'https://api.github.com/repos/Radiant303/XiaoYuNote/contents/update';
+      'https://api.github.com/repos/ZYQIHUI/XiaoYuNote/contents/update';
   static const _configuredUpdateBaseUrl = String.fromEnvironment(
     'SPRINGNOTE_UPDATE_BASE_URL',
   );

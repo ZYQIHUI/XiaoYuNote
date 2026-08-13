@@ -404,6 +404,41 @@ class _ProviderDetailsState extends State<_ProviderDetails> {
                       },
                     ),
                     const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        OutlinedButton.icon(
+                          key: const ValueKey('test-connection-prominent-button'),
+                          onPressed: _testingConnection ? null : _testConnection,
+                          icon: _testingConnection
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.play_circle_outline, size: 18),
+                          label: Text(strings.settingsTestConnection),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        OutlinedButton.icon(
+                          onPressed: _fetchingModels ? null : _fetchModels,
+                          icon: _fetchingModels
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.download_outlined, size: 18),
+                          label: Text(strings.settingsFetchModels),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
                     _ModelsList(
                       provider: provider,
                       testingConnection: _testingConnection,

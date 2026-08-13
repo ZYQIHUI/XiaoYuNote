@@ -3,7 +3,6 @@ part of 'settings_page.dart';
 class _AboutPanel extends StatelessWidget {
   const _AboutPanel();
 
-  static const _websiteUrl = 'https://radiant303.github.io/XiaoYuNote';
   static const _githubUrl = 'https://github.com/ZYQIHUI/XiaoYuNote';
   static const _licenseUrl =
       'https://github.com/ZYQIHUI/XiaoYuNote/blob/main/LICENSE';
@@ -56,11 +55,6 @@ class _AboutPanel extends StatelessWidget {
           rows: [
             const _PubspecVersionRow(),
             const _PlatformInfoRow(),
-            _AboutListRow(
-              icon: _AboutRowIconType.globe,
-              label: l10n(context).settingsWebsite,
-              onTap: () => _externalLinkService.open(_websiteUrl),
-            ),
             _AboutListRow(
               icon: _AboutRowIconType.github,
               label: 'GitHub',
@@ -127,7 +121,7 @@ class _AboutListCard extends StatelessWidget {
   }
 }
 
-enum _AboutRowIconType { code, system, update, globe, github, license, qq }
+enum _AboutRowIconType { code, system, github, license }
 
 class _PubspecVersionRow extends StatelessWidget {
   const _PubspecVersionRow();
@@ -366,36 +360,6 @@ class _AboutRowIconPainter extends CustomPainter {
         canvas.drawLine(p(9, 20), p(15, 20), paint);
         canvas.drawLine(p(12, 16), p(12, 20), paint);
         break;
-      case _AboutRowIconType.update:
-        // 刷新双箭头：上弧自 (4,12) 经顶部至 (19,9) 附近，下弧自 (20,12) 经底部至 (5,15) 附近
-        final refreshBounds = Rect.fromCenter(
-          center: p(12, 12),
-          width: 16 * sx,
-          height: 16 * sy,
-        );
-        canvas.drawArc(refreshBounds, 3.1416, 2.7227, false, paint);
-        canvas.drawArc(refreshBounds, 0, 2.7227, false, paint);
-        final topArrow = Path()
-          ..moveTo(15.5 * sx, 8.5 * sy)
-          ..lineTo(19.5 * sx, 8.5 * sy)
-          ..lineTo(19.5 * sx, 4.5 * sy);
-        canvas.drawPath(topArrow, paint);
-        final bottomArrow = Path()
-          ..moveTo(8.5 * sx, 15.5 * sy)
-          ..lineTo(4.5 * sx, 15.5 * sy)
-          ..lineTo(4.5 * sx, 19.5 * sy);
-        canvas.drawPath(bottomArrow, paint);
-        break;
-      case _AboutRowIconType.globe:
-        canvas.drawCircle(p(12, 12), 8 * strokeScale, paint);
-        canvas.drawOval(
-          Rect.fromCenter(center: p(12, 12), width: 8 * sx, height: 16 * sy),
-          paint,
-        );
-        canvas.drawLine(p(4, 12), p(20, 12), paint);
-        canvas.drawLine(p(6.2, 8), p(17.8, 8), paint);
-        canvas.drawLine(p(6.2, 16), p(17.8, 16), paint);
-        break;
       case _AboutRowIconType.github:
         final path = Path()
           ..moveTo(12 * sx, 3.8 * sy)
@@ -499,17 +463,6 @@ class _AboutRowIconPainter extends CustomPainter {
         canvas.drawLine(p(14, 7.5), p(18, 7.5), paint);
         canvas.drawLine(p(9.5, 11.5), p(15.5, 11.5), paint);
         canvas.drawLine(p(9.5, 15), p(14, 15), paint);
-        break;
-      case _AboutRowIconType.qq:
-        canvas.drawRRect(rr(4.5, 5.5, 15, 11.5, 3.4), paint);
-        final tail = Path()
-          ..moveTo(9.2 * sx, 16.8 * sy)
-          ..lineTo(7.4 * sx, 20 * sy)
-          ..lineTo(11.8 * sx, 16.8 * sy);
-        canvas.drawPath(tail, paint);
-        canvas.drawCircle(p(9, 11.2), 0.9 * strokeScale, fillPaint);
-        canvas.drawCircle(p(12, 11.2), 0.9 * strokeScale, fillPaint);
-        canvas.drawCircle(p(15, 11.2), 0.9 * strokeScale, fillPaint);
         break;
     }
   }

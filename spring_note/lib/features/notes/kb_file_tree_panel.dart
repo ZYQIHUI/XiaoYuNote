@@ -775,10 +775,15 @@ class _CodeTreeViewState extends State<_CodeTreeView> {
                 padding: EdgeInsets.only(left: 4.0 + widget.depth * 14, right: 8),
                 child: Row(
                   children: [
-                    Icon(
-                      _expanded ? Icons.arrow_drop_down : Icons.arrow_right,
-                      size: 18,
-                      color: colors.textMuted,
+                    AnimatedRotation(
+                      turns: _expanded ? 0.25 : 0,
+                      duration: const Duration(milliseconds: 180),
+                      curve: Curves.easeInOut,
+                      child: Icon(
+                        Icons.arrow_right,
+                        size: 18,
+                        color: colors.textMuted,
+                      ),
                     ),
                     const SizedBox(width: 2),
                     Icon(
@@ -800,18 +805,29 @@ class _CodeTreeViewState extends State<_CodeTreeView> {
             ),
           ),
         ),
-        if (_expanded)
-          for (final child in children)
-            _CodeTreeView(
-              key: ValueKey(widget.pathOf(child, path)),
-              node: child,
-              onFileTap: widget.onFileTap,
-              onNewItem: widget.onNewItem,
-              onDelete: widget.onDelete,
-              pathOf: widget.pathOf,
-              parentPath: path,
-              depth: widget.depth + 1,
-            ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          alignment: Alignment.topCenter,
+          child: _expanded
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final child in children)
+                      _CodeTreeView(
+                        key: ValueKey(widget.pathOf(child, path)),
+                        node: child,
+                        onFileTap: widget.onFileTap,
+                        onNewItem: widget.onNewItem,
+                        onDelete: widget.onDelete,
+                        pathOf: widget.pathOf,
+                        parentPath: path,
+                        depth: widget.depth + 1,
+                      ),
+                  ],
+                )
+              : const SizedBox(width: double.infinity),
+        ),
       ],
     );
   }

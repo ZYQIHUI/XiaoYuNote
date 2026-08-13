@@ -13,8 +13,20 @@ class KbRustClient {
 
   final String dataDir;
 
-  /// 默认数据目录（不带 dataDir 参数创建时使用），由 App 启动时设置。
-  static String? defaultDataDir;
+  /// 数据目录（不带 dataDir 参数创建时使用），App 启动时设置。
+  static String? dataDirectory;
+
+  /// 知识库数据目录：优先 kbDataDir，否则数据目录。
+  static String? kbDataDir;
+
+  /// 实际生效的知识库目录（kbDataDir 优先）。
+  static String? get defaultDataDir => kbDataDir ?? dataDirectory;
+
+  /// 数据目录变化时同步（AppShell 配置变更调用）。
+  static void updateDataDir(String dataDir, {String? kb}) {
+    dataDirectory = dataDir;
+    kbDataDir = kb;
+  }
 
   // ------------------------------------------------------------------
   // 文件树

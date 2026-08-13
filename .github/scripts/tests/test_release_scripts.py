@@ -26,7 +26,7 @@ def run_script(*args: str) -> subprocess.CompletedProcess[str]:
 
 
 def write_valid_appcast(metadata_dir: Path, *, version: str = "1.2.3") -> None:
-    release_base = f"https://github.com/Radiant303/XiaoYuNote/releases/download/{version}"
+    release_base = f"https://github.com/ZYQIHUI/XiaoYuNote/releases/download/{version}"
     metadata_dir.joinpath("appcast.xml").write_text(
         "\n".join(
             [
@@ -196,7 +196,7 @@ class ReleaseScriptTests(unittest.TestCase):
                 "--version",
                 "1.2.3",
                 "--repo",
-                "Radiant303/XiaoYuNote",
+                "ZYQIHUI/XiaoYuNote",
                 "--macos-asset",
                 "XiaoYuNote-1.2.3-macos-arm64.dmg",
                 "--windows-asset",
@@ -217,7 +217,7 @@ class ReleaseScriptTests(unittest.TestCase):
                 "--version",
                 "1.2.3",
                 "--repo",
-                "Radiant303/XiaoYuNote",
+                "ZYQIHUI/XiaoYuNote",
                 "--macos-asset",
                 "XiaoYuNote-1.2.3-macos-arm64.dmg",
                 "--windows-asset",
@@ -250,7 +250,7 @@ class ReleaseScriptTests(unittest.TestCase):
                     {
                         "version": "9.9.9",
                         "change_time": "2026年6月29日 13:30:00",
-                        "download_url": "https://github.com/Radiant303/XiaoYuNote/releases/download/1.2.3/XiaoYuNote-1.2.3-macos-arm64.dmg",
+                        "download_url": "https://github.com/ZYQIHUI/XiaoYuNote/releases/download/1.2.3/XiaoYuNote-1.2.3-macos-arm64.dmg",
                     }
                 ),
                 encoding="utf-8",
@@ -260,7 +260,7 @@ class ReleaseScriptTests(unittest.TestCase):
                     {
                         "version": "1.2.3",
                         "change_time": "2026年6月29日 13:30:00",
-                        "download_url": "https://github.com/Radiant303/XiaoYuNote/releases/download/1.2.3/XiaoYuNote-1.2.3-windows-x64-setup.exe",
+                        "download_url": "https://github.com/ZYQIHUI/XiaoYuNote/releases/download/1.2.3/XiaoYuNote-1.2.3-windows-x64-setup.exe",
                     }
                 ),
                 encoding="utf-8",
@@ -276,7 +276,7 @@ class ReleaseScriptTests(unittest.TestCase):
                 "--version",
                 "1.2.3",
                 "--repo",
-                "Radiant303/XiaoYuNote",
+                "ZYQIHUI/XiaoYuNote",
                 "--macos-asset",
                 "XiaoYuNote-1.2.3-macos-arm64.dmg",
                 "--windows-asset",
@@ -293,7 +293,7 @@ class ReleaseScriptTests(unittest.TestCase):
             tmp_path = Path(tmp)
             metadata_dir = tmp_path / "update"
             metadata_dir.mkdir()
-            release_base = "https://github.com/Radiant303/XiaoYuNote/releases/download/1.2.3"
+            release_base = "https://github.com/ZYQIHUI/XiaoYuNote/releases/download/1.2.3"
             metadata_dir.joinpath("mac.json").write_text(
                 json.dumps(
                     {
@@ -325,7 +325,7 @@ class ReleaseScriptTests(unittest.TestCase):
                 "--version",
                 "1.2.3",
                 "--repo",
-                "Radiant303/XiaoYuNote",
+                "ZYQIHUI/XiaoYuNote",
                 "--macos-asset",
                 "XiaoYuNote-1.2.3-macos-arm64.dmg",
                 "--windows-asset",
@@ -342,7 +342,7 @@ class ReleaseScriptTests(unittest.TestCase):
             tmp_path = Path(tmp)
             metadata_dir = tmp_path / "update"
             metadata_dir.mkdir()
-            release_base = "https://github.com/Radiant303/XiaoYuNote/releases/download/1.2.3"
+            release_base = "https://github.com/ZYQIHUI/XiaoYuNote/releases/download/1.2.3"
             metadata_dir.joinpath("mac.json").write_text(
                 json.dumps(
                     {
@@ -392,7 +392,7 @@ class ReleaseScriptTests(unittest.TestCase):
                 "--version",
                 "1.2.3",
                 "--repo",
-                "Radiant303/XiaoYuNote",
+                "ZYQIHUI/XiaoYuNote",
                 "--macos-asset",
                 "XiaoYuNote-1.2.3-macos-arm64.dmg",
                 "--windows-asset",
@@ -409,7 +409,7 @@ class ReleaseScriptTests(unittest.TestCase):
             tmp_path = Path(tmp)
             metadata_dir = tmp_path / "update"
             metadata_dir.mkdir()
-            release_base = "https://github.com/Radiant303/XiaoYuNote/releases/download/1.2.3"
+            release_base = "https://github.com/ZYQIHUI/XiaoYuNote/releases/download/1.2.3"
             metadata_dir.joinpath("mac.json").write_text(
                 json.dumps(
                     {
@@ -449,7 +449,7 @@ class ReleaseScriptTests(unittest.TestCase):
                 "--version",
                 "1.2.3",
                 "--repo",
-                "Radiant303/XiaoYuNote",
+                "ZYQIHUI/XiaoYuNote",
                 "--macos-asset",
                 "XiaoYuNote-1.2.3-macos-arm64.dmg",
                 "--windows-asset",
@@ -470,7 +470,7 @@ class ReleaseScriptTests(unittest.TestCase):
             "--version",
             "1.2.3",
             "--repo",
-            "Radiant303/XiaoYuNote",
+            "ZYQIHUI/XiaoYuNote",
             "--macos-asset",
             "XiaoYuNote-1.2.3-macos-arm64.dmg",
             "--windows-asset",
@@ -488,7 +488,7 @@ class ReleaseScriptTests(unittest.TestCase):
             "--version",
             "1.2.3",
             "--repo",
-            "Radiant303/XiaoYuNote",
+            "ZYQIHUI/XiaoYuNote",
             "--macos-asset",
             "XiaoYuNote-1.2.3-macos-arm64.dmg",
             "--windows-asset",
@@ -516,7 +516,7 @@ class ReleaseScriptTests(unittest.TestCase):
                 "--version",
                 "1.2.3",
                 "--repo",
-                "Radiant303/XiaoYuNote",
+                "ZYQIHUI/XiaoYuNote",
                 "--macos-asset",
                 "XiaoYuNote-1.2.3-macos-arm64.dmg",
                 "--windows-asset",

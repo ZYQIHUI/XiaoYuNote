@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -9,6 +10,7 @@ import '../models/app_config.dart';
 import '../models/local_data_state.dart';
 import '../services/auto_start_service.dart';
 import '../services/global_hotkey_service.dart';
+import '../services/kb_rust_client.dart';
 import '../services/local_data_service.dart';
 import '../services/note_service.dart';
 import '../services/tray_service.dart';
@@ -98,6 +100,11 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       _localDataState = state;
     });
     widget.onConfigChanged?.call(state.config);
+    // 知识库目录可能变化（kbDataDir 自定义），同步到 Rust 客户端
+    KbRustClient.updateDataDir(
+      state.dataDirectory,
+      kb: state.config.kbDataDir,
+    );
     _syncAutoStart(state.config);
     _syncTray(state.config);
     _syncGlobalHotkey(state.config);
@@ -349,21 +356,8 @@ class _SidebarLucidePainter extends CustomPainter {
     }
   }
 
-  double _cos(double angle) => _approxCos(angle);
-  double _sin(double angle) => _approxSin(angle);
-
-  // 轻量三角函数近似（避免 dart:math 依赖）
-  double _approxSin(double x) {
-    // Taylor 级数 sin(x) ≈ x - x^3/6 + x^5/120
-    final x2 = x * x;
-    return x * (1 - x2 / 6 + x2 * x2 / 120);
-  }
-
-  double _approxCos(double x) {
-    // Taylor 级数 cos(x) ≈ 1 - x^2/2 + x^4/24
-    final x2 = x * x;
-    return 1 - x2 / 2 + x2 * x2 / 24;
-  }
+  double _cos(double angle) => math.cos(angle);
+  double _sin(double angle) => math.sin(angle);
 
   @override
   bool shouldRepaint(covariant _SidebarLucidePainter oldDelegate) {

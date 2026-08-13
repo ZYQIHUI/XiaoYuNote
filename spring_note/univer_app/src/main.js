@@ -8,10 +8,20 @@
  *   setDirty(bool) / getDirty()    编辑状态标记（保存/关闭提示）
  */
 
-import { Univer, UniverInstanceType, LocaleType } from '@univerjs/core';
+import * as coreNS from '@univerjs/core';
+import * as renderNS from '@univerjs/engine-render';
+import { FUniver } from '@univerjs/core/facade';
+import '@univerjs/sheets/facade';
+import '@univerjs/sheets-ui/facade';
+import { Univer, UniverInstanceType, LocaleType, LogLevel } from '@univerjs/core';
+// 暴露 core/render 服务引用（自定义编辑器用）
+window.__univerCore = coreNS;
+window.__univerRender = renderNS;
 import { UniverSheetsPlugin } from '@univerjs/sheets';
 import { UniverSheetsUIPlugin } from '@univerjs/sheets-ui';
 import { UniverRenderEnginePlugin } from '@univerjs/engine-render';
+import { UniverSheetsNumfmtPlugin } from '@univerjs/sheets-numfmt';
+import { UniverSheetsZenEditorPlugin } from '@univerjs/sheets-zen-editor';
 import { UniverUIPlugin } from '@univerjs/ui';
 import { UniverDocsPlugin } from '@univerjs/docs';
 import { UniverDocsUIPlugin } from '@univerjs/docs-ui';
@@ -67,14 +77,21 @@ function createUniver() {
   univer = new Univer({
     locale: LocaleType.ZH_CN,
     locales,
+    logLevel: LogLevel.VERBOSE,
   });
-  // 官方 0.25 注册顺序：Docs → RenderEngine → UI(container) → DocsUI → Sheets → SheetsUI
+  // 最小插件集：Docs → RenderEngine → UI → DocsUI → Sheets → SheetsUI → Numfmt → ZenEditor
+  // 单元格编辑由自定义实现（见 setupCustomCellEditor），不依赖公式引擎/RPC worker
   univer.registerPlugin(UniverDocsPlugin);
   univer.registerPlugin(UniverRenderEnginePlugin);
   univer.registerPlugin(UniverUIPlugin, { container });
   univer.registerPlugin(UniverDocsUIPlugin);
-  univer.registerPlugin(UniverSheetsPlugin);
+  univer.registerPlugin(UniverSheetsPlugin, {
+    notExecuteFormula: true,
+    autoHeightForMergedCells: true,
+  });
   univer.registerPlugin(UniverSheetsUIPlugin);
+  univer.registerPlugin(UniverSheetsNumfmtPlugin);
+  univer.registerPlugin(UniverSheetsZenEditorPlugin);
   // 提高默认工作表列数（Univer 默认 20 列，宽表显示不全）
   try {
     const configService = univer.__getInjector().get('univer.config-service');
@@ -87,6 +104,8 @@ function createUniver() {
     // 配置失败不阻塞
   }
   window.__univer = univer;
+  // FUniver facade（稳定 API，自定义编辑器用）
+  window.__fUniver = FUniver.newAPI(univer);
   setupDirtyTracking();
 }
 
@@ -228,6 +247,8 @@ function toUniverData(workbook) {
   return {
     id: 'workbook-1',
     name: 'XiaoYu 工作簿',
+    appVersion: '0.25.1',
+    locale: LocaleType.ZH_CN,
     sheetOrder,
     sheets,
   };
@@ -297,7 +318,10 @@ window.univerBridge = {
   newSheet() {
     if (univer) {
       univer.createUnit(UniverInstanceType.UNIVER_SHEET, {
+        id: 'workbook-' + Date.now(),
         name: '工作表',
+        appVersion: '0.25.1',
+        locale: LocaleType.ZH_CN,
         sheetOrder: ['sheet-1'],
         sheets: {
           'sheet-1': { id: 'sheet-1', name: 'Sheet1', rowCount: 100, columnCount: 100, defaultColumnWidth: 60, cellData: {} },
@@ -390,6 +414,9 @@ function bootstrap() {
   try {
     createUniver();
     window.univerBridge.newSheet();
+    // 挂载自定义单元格编辑（Univer 0.25.1 编辑器组件在此集成中未正确挂载，
+    // 用浮动 input + 命令写入实现可靠编辑）
+    setupCustomCellEditor();
     // 通知 Flutter：前端已就绪，可以开始通信
     if (window.chrome && window.chrome.webview) {
       window.chrome.webview.postMessage(JSON.stringify({ type: 'ready' }));
@@ -399,6 +426,165 @@ function bootstrap() {
     if (window.chrome && window.chrome.webview) {
       window.chrome.webview.postMessage(JSON.stringify({ type: 'error', message: String(err) }));
     }
+  }
+}
+
+// ------------------------------------------------------------------
+// 自定义单元格编辑（绕开 Univer 0.25.1 未挂载的编辑器组件）
+// ------------------------------------------------------------------
+
+let _cellEditor = null;
+let _editCellRef = null; // {row, col} 1-based
+
+/** 创建浮动单元格编辑器 input（覆盖在激活单元格上方）。 */
+function ensureCellEditor() {
+  if (_cellEditor) return _cellEditor;
+  const input = document.createElement('input');
+  input.type = 'text';
+  Object.assign(input.style, {
+    position: 'absolute',
+    zIndex: '100',
+    display: 'none',
+    fontSize: '13px',
+    fontFamily: 'inherit',
+    padding: '2px 4px',
+    border: '2px solid #4c8dff',
+    outline: 'none',
+    background: '#fff',
+    boxSizing: 'border-box',
+  });
+  input.addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      commitCellEditor();
+    } else if (e.key === 'Escape') {
+      cancelCellEditor();
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      commitCellEditor();
+    }
+  });
+  input.addEventListener('blur', () => commitCellEditor());
+  document.body.appendChild(input);
+  _cellEditor = input;
+  return input;
+}
+
+/** 获取当前激活单元格（1-based row/col）与近似屏幕坐标。 */
+function getActiveCellRect() {
+  try {
+    const f = window.__fUniver;
+    if (!f) return null;
+    const workbook = f.getActiveWorkbook();
+    if (!workbook) return null;
+    const sheet = workbook.getActiveSheet();
+    if (!sheet) return null;
+    const sel = sheet.getSelection();
+    if (!sel) return null;
+    const range = sel.getActiveRange ? sel.getActiveRange() : null;
+    if (!range) return null;
+    const inner = range._range;
+    if (!inner) return null;
+    const row = inner.startRow + 1;
+    const col = inner.startColumn + 1;
+    // 近似坐标：画布起点 + 行/列表头偏移 + (行列-1)*行高/列宽
+    const canvas = document.querySelector('canvas');
+    if (!canvas) return null;
+    const crect = canvas.getBoundingClientRect();
+    const headerW = 40;
+    const headerH = 24;
+    const colW = 60;
+    const rowH = 24;
+    return {
+      row, col,
+      x: crect.x + headerW + (col - 1) * colW,
+      y: crect.y + headerH + (row - 1) * rowH,
+      w: colW,
+      h: rowH,
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+/** 在 canvas 上监听键盘输入：字符键 → 打开浮动编辑器。 */
+function setupCustomCellEditor() {
+  setTimeout(() => {
+    const canvas = document.querySelector('canvas');
+    if (!canvas) return;
+    canvas.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key.length === 1 && !e.key.startsWith('F')) {
+        e.preventDefault();
+        e.stopPropagation();
+        openCellEditor(e.key);
+      } else if (e.key === 'Enter' || e.key === 'Tab') {
+        commitCellEditor();
+      } else if (e.key === 'Escape') {
+        cancelCellEditor();
+      }
+    });
+    // 点击画布时提交当前编辑
+    canvas.addEventListener('pointerdown', () => commitCellEditor());
+  }, 2000);
+}
+
+/** 打开编辑器，预填首个字符。 */
+function openCellEditor(firstChar) {
+  const rect = getActiveCellRect();
+  if (!rect) return;
+  const input = ensureCellEditor();
+  _editCellRef = { row: rect.row, col: rect.col };
+  input.value = firstChar;
+  input.style.display = 'block';
+  input.style.left = rect.x + 'px';
+  input.style.top = rect.y + 'px';
+  input.style.width = Math.max(rect.w, 60) + 'px';
+  input.style.height = Math.max(rect.h, 22) + 'px';
+  input.focus();
+  input.setSelectionRange(1, 1);
+}
+
+/** 提交编辑：把值写入激活单元格。 */
+async function commitCellEditor() {
+  const input = _cellEditor;
+  if (!input || input.style.display === 'none') return;
+  const ref = _editCellRef;
+  input.style.display = 'none';
+  _editCellRef = null;
+  if (!ref) return;
+  const value = input.value;
+  if (value === '') return;
+  try {
+    const core = window.__univerCore;
+    const injector = window.__univer.__getInjector();
+    const cmdSvc = injector.get(core.ICommandService);
+    const instSvc = injector.get(core.IUniverInstanceService);
+    const unit = instSvc.getCurrentUnitOfType(2);
+    const sheet = unit.getActiveSheet();
+    const type = /^-?\d+(\.\d+)?$/.test(value) ? 2 : 1;
+    const val = type === 2 ? Number(value) : value;
+    await cmdSvc.executeCommand('sheet.command.set-range-values', {
+      unitId: unit.getUnitId(),
+      subUnitId: sheet.getSheetId(),
+      range: {
+        startRow: ref.row - 1, endRow: ref.row - 1,
+        startColumn: ref.col - 1, endColumn: ref.col - 1,
+      },
+      value: { [ref.row]: { [ref.col]: { v: val, t: type } } },
+    });
+  } catch (err) {
+    console.error('[univer] 写入单元格失败:', err);
+  }
+}
+
+/** 取消编辑。 */
+function cancelCellEditor() {
+  if (_cellEditor) {
+    _cellEditor.style.display = 'none';
+    _cellEditor.value = '';
+    _editCellRef = null;
   }
 }
 

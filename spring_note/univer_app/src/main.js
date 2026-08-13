@@ -443,15 +443,20 @@ function ensureCellEditor() {
   input.type = 'text';
   Object.assign(input.style, {
     position: 'absolute',
-    zIndex: '100',
+    zIndex: '1000',
     display: 'none',
-    fontSize: '13px',
+    fontSize: '14px',
     fontFamily: 'inherit',
-    padding: '2px 4px',
+    fontWeight: '500',
+    padding: '3px 6px',
     border: '2px solid #4c8dff',
+    borderRadius: '3px',
     outline: 'none',
     background: '#fff',
+    color: '#000',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
     boxSizing: 'border-box',
+    caretColor: '#4c8dff',
   });
   input.addEventListener('keydown', (e) => {
     e.stopPropagation();
@@ -471,37 +476,59 @@ function ensureCellEditor() {
   return input;
 }
 
-/** 获取当前激活单元格（1-based row/col）与近似屏幕坐标。 */
-function getActiveCellRect() {
+/** 获取当前激活单元格（1-based row/col）与屏幕坐标。
+ *  用真实列宽/行高累计定位，不依赖 Univer 选区 API（getActiveRange 返回全选不可靠）。 */
+function getCellFromPoint(clientX, clientY) {
   try {
     const f = window.__fUniver;
-    if (!f) return null;
+    const canvas = document.querySelector('canvas');
+    if (!f || !canvas) return null;
+    const crect = canvas.getBoundingClientRect();
+    const lx = clientX - crect.x - 40; // 减列表头宽
+    const ly = clientY - crect.y - 24; // 减行表头高
+    if (lx < 0 || ly < 0) return null;
     const workbook = f.getActiveWorkbook();
-    if (!workbook) return null;
     const sheet = workbook.getActiveSheet();
     if (!sheet) return null;
-    const sel = sheet.getSelection();
-    if (!sel) return null;
-    const range = sel.getActiveRange ? sel.getActiveRange() : null;
-    if (!range) return null;
-    const inner = range._range;
-    if (!inner) return null;
-    const row = inner.startRow + 1;
-    const col = inner.startColumn + 1;
-    // 近似坐标：画布起点 + 行/列表头偏移 + (行列-1)*行高/列宽
-    const canvas = document.querySelector('canvas');
-    if (!canvas) return null;
-    const crect = canvas.getBoundingClientRect();
-    const headerW = 40;
-    const headerH = 24;
-    const colW = 60;
-    const rowH = 24;
+    // 累计列宽找列
+    let col = 1;
+    let acc = 0;
+    for (let c = 0; c < 200; c++) {
+      const w = sheet.getColumnWidth ? sheet.getColumnWidth(c) : 60;
+      const cw = w > 0 ? w : 60;
+      if (lx >= acc && lx < acc + cw) { col = c + 1; break; }
+      acc += cw;
+      col = c + 2;
+    }
+    // 累计行高找行
+    let row = 1;
+    acc = 0;
+    for (let r = 0; r < 200; r++) {
+      const h = sheet.getRowHeight ? sheet.getRowHeight(r) : 24;
+      const rh = h > 0 ? h : 24;
+      if (ly >= acc && ly < acc + rh) { row = r + 1; break; }
+      acc += rh;
+      row = r + 2;
+    }
+    // 编辑器位置：用该单元格的起点
+    let ex = 40;
+    for (let c = 0; c < col - 1; c++) {
+      const w = sheet.getColumnWidth ? sheet.getColumnWidth(c) : 60;
+      ex += (w > 0 ? w : 60);
+    }
+    let ey = 24;
+    for (let r = 0; r < row - 1; r++) {
+      const h = sheet.getRowHeight ? sheet.getRowHeight(r) : 24;
+      ey += (h > 0 ? h : 24);
+    }
+    const cw = sheet.getColumnWidth ? (sheet.getColumnWidth(col - 1) || 60) : 60;
+    const rh = sheet.getRowHeight ? (sheet.getRowHeight(row - 1) || 24) : 24;
     return {
       row, col,
-      x: crect.x + headerW + (col - 1) * colW,
-      y: crect.y + headerH + (row - 1) * rowH,
-      w: colW,
-      h: rowH,
+      x: crect.x + ex,
+      y: crect.y + ey,
+      w: cw,
+      h: rh,
     };
   } catch (e) {
     return null;
@@ -513,6 +540,20 @@ function setupCustomCellEditor() {
   setTimeout(() => {
     const canvas = document.querySelector('canvas');
     if (!canvas) return;
+    // 点击 canvas：记录目标单元格（供编辑器定位与提交）
+    canvas.addEventListener('pointerdown', (e) => {
+      commitCellEditor();
+      const rect = getCellFromPoint(e.clientX, e.clientY);
+      if (rect) {
+        _pendingCell = { row: rect.row, col: rect.col, x: rect.x, y: rect.y, w: rect.w, h: rect.h };
+        // 让 Univer 选区跟随（增强视觉反馈）
+        try {
+          const f = window.__fUniver;
+          const sheet = f.getActiveWorkbook().getActiveSheet();
+          sheet.setSelection({ startRow: rect.row - 1, endRow: rect.row - 1, startColumn: rect.col - 1, endColumn: rect.col - 1 });
+        } catch (_) { /* 选区设置失败不阻塞编辑 */ }
+      }
+    });
     canvas.addEventListener('keydown', (e) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.key.length === 1 && !e.key.startsWith('F')) {
@@ -525,23 +566,46 @@ function setupCustomCellEditor() {
         cancelCellEditor();
       }
     });
-    // 点击画布时提交当前编辑
-    canvas.addEventListener('pointerdown', () => commitCellEditor());
   }, 2000);
 }
 
+/** 待编辑的单元格（pointerdown 记录）。 */
+let _pendingCell = null;
+
 /** 打开编辑器，预填首个字符。 */
 function openCellEditor(firstChar) {
-  const rect = getActiveCellRect();
+  // 优先用 pointerdown 记录的位置；否则用键盘触发时重新定位
+  let rect = _pendingCell;
+  if (!rect) {
+    // 键盘触发但无点击记录：用当前选区起点（退化路径）
+    const f = window.__fUniver;
+    if (f) {
+      const sheet = f.getActiveWorkbook().getActiveSheet();
+      const sel = sheet.getSelection();
+      const range = sel && sel.getActiveRange ? sel.getActiveRange() : null;
+      if (range && range._range) {
+        const inner = range._range;
+        rect = { row: inner.startRow + 1, col: inner.startColumn + 1, x: 0, y: 0, w: 60, h: 24 };
+      }
+    }
+  }
   if (!rect) return;
   const input = ensureCellEditor();
   _editCellRef = { row: rect.row, col: rect.col };
   input.value = firstChar;
   input.style.display = 'block';
-  input.style.left = rect.x + 'px';
-  input.style.top = rect.y + 'px';
-  input.style.width = Math.max(rect.w, 60) + 'px';
-  input.style.height = Math.max(rect.h, 22) + 'px';
+  if (rect.x > 0) {
+    input.style.left = rect.x + 'px';
+    input.style.top = rect.y + 'px';
+    input.style.width = Math.max(rect.w, 60) + 'px';
+    input.style.height = Math.max(rect.h, 22) + 'px';
+  } else {
+    // 退化：屏幕中央
+    input.style.left = '200px';
+    input.style.top = '200px';
+    input.style.width = '160px';
+    input.style.height = '24px';
+  }
   input.focus();
   input.setSelectionRange(1, 1);
 }

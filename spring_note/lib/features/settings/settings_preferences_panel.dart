@@ -147,22 +147,6 @@ class _PreferencesPanel extends StatelessWidget {
           title: strings.settingsPromptTitle,
           children: [
             _ActionSettingRow(
-              label: strings.settingsHomeSections,
-              value: '',
-              onTap: () async {
-                final sections =
-                    await showDialog<List<StructuredNoteSectionConfig>>(
-                      context: context,
-                      builder: (_) => _StructuredNoteSectionsDialog(
-                        sections: config.structuredNoteSections,
-                      ),
-                    );
-                if (sections != null) {
-                  onChanged(config.copyWith(structuredNoteSections: sections));
-                }
-              },
-            ),
-            _ActionSettingRow(
               label: strings.settingsDailyMergePrompt,
               value: '',
               onTap: () async {
@@ -242,55 +226,6 @@ class _PreferencesPanel extends StatelessWidget {
                 );
                 if (prompt != null) {
                   onChanged(config.copyWith(weeklyReportPrompt: prompt));
-                }
-              },
-            ),
-            _ActionSettingRow(
-              label: strings.settingsGlobalSignPrompt,
-              value: '',
-              onTap: () async {
-                final prompt = await showDialog<String>(
-                  context: context,
-                  builder: (_) => _PromptEditDialog(
-                    appDataDir: appDataDir,
-                    config: config,
-                    aiClientService: aiClientService,
-                    dialogKey: const ValueKey('global-sign-prompt-dialog'),
-                    title: strings.settingsEditGlobalSignPromptTitle,
-                    hintText: strings.settingsGlobalSignPromptHint,
-                    initialPrompt: config.globalSignPrompt,
-                    defaultPrompt: defaultGlobalSignPromptFor(currentAppLanguage(context)),
-                    variables: [
-                      (
-                        Icons.calendar_month_outlined,
-                        '{date}',
-                        strings.settingsVariableCurrentDate,
-                      ),
-                      (
-                        Icons.article_outlined,
-                        '{daily_markdown}',
-                        strings.settingsVariableDailyContent,
-                      ),
-                      (
-                        Icons.push_pin_outlined,
-                        '{global_sign}',
-                        strings.settingsVariableGlobalSignJson,
-                      ),
-                      (
-                        Icons.edit_note_rounded,
-                        '{raw_input}',
-                        strings.settingsVariableRawInput,
-                      ),
-                      (
-                        Icons.business_center_outlined,
-                        '{industry}',
-                        strings.settingsVariableIndustry,
-                      ),
-                    ],
-                  ),
-                );
-                if (prompt != null) {
-                  onChanged(config.copyWith(globalSignPrompt: prompt));
                 }
               },
             ),

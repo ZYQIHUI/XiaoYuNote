@@ -423,7 +423,7 @@ class _KbFileTreePanelState extends State<KbFileTreePanel> {
             Icon(Icons.cloud_off, size: 40, color: colors.textMuted),
             const SizedBox(height: 10),
             Text(
-              'sidecar 未连接',
+              '文件树加载失败',
               style: TextStyle(color: colors.textMuted, fontSize: 14),
             ),
             const SizedBox(height: 6),

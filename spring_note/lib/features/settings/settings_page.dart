@@ -18,7 +18,7 @@ import '../../core/services/external_link_service.dart';
 import '../../core/services/local_data_service.dart';
 import '../../core/services/note_image_cleanup_service.dart';
 import '../../core/services/platform_feature_support.dart';
-import '../../core/services/sidecar_client.dart';
+import '../../core/services/kb_rust_client.dart';
 import '../../core/services/system_font_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/markdown_editor_highlight.dart';

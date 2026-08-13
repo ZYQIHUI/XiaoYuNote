@@ -1,26 +1,19 @@
-/// 表格编辑器页面 — Univer(WebView2) 打开/新建/编辑 xlsx，保存到 sidecar。
+/// 表格编辑器页面 — Univer(WebView2) 打开/新建/编辑 xlsx。
 ///
-/// 保存走 /api/files/xlsx（base64），随后 sidecar 的 watchdog 自动增量索引，
+/// 保存走 KbRustClient（Rust bridge，xlsx base64），随后 Rust 层增量索引，
 /// 之后可在知识库问答中精确命中单号/金额。
 library;
 
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:spring_note/core/services/sidecar_client.dart';
-import 'package:spring_note/core/services/sidecar_lifecycle.dart';
+import 'package:spring_note/core/services/kb_rust_client.dart';
 import 'package:spring_note/core/theme/app_theme.dart';
 import 'package:spring_note/features/sheets/univer_sheet_widget.dart';
 
 /// Univer 前端入口。
-/// 优先走 sidecar 本地 HTTP（/univer，ES module 无法从 file:// 加载），
-/// sidecar 不可用时回退 file://（开发/演示）。
+/// 从本地 file:// 加载（Rust 已内置，无 sidecar HTTP 服务）。
 String defaultUniverHtmlUrl() {
-  final base = SidecarClient().baseUrl;
-  final viaHttp = '$base/univer/index.html';
-  if (base.startsWith('http://')) {
-    return viaHttp;
-  }
   final exeDir = File(Platform.resolvedExecutable).parent.path;
   final bundled =
       '$exeDir${Platform.pathSeparator}univer_app${Platform.pathSeparator}dist${Platform.pathSeparator}index.html';
@@ -40,11 +33,11 @@ class SheetEditorPage extends StatefulWidget {
     this.initialBase64,
   });
 
-  /// 打开的 xlsx 相对路径（sidecar 数据目录内）；null = 新建。
+  /// 打开的 xlsx 相对路径（数据目录内）；null = 新建。
   final String? path;
 
-  /// 可注入的 sidecar 客户端（测试用）。
-  final SidecarClient? client;
+  /// 可注入的 Rust 客户端（测试用）。
+  final KbRustClient? client;
 
   /// Univer 前端入口（file://）。
   final String Function() htmlUrl;
@@ -59,7 +52,7 @@ class SheetEditorPage extends StatefulWidget {
 class _SheetEditorPageState extends State<SheetEditorPage> {
   final GlobalKey<UniverSheetWidgetState> _sheetKey = GlobalKey<UniverSheetWidgetState>();
   UniverSheetWidgetState? _sheetState;
-  SidecarClient? _client;
+  KbRustClient? _client;
   String? _currentPath;
   String? _status;
   bool _saving = false;
@@ -69,82 +62,10 @@ class _SheetEditorPageState extends State<SheetEditorPage> {
   void initState() {
     super.initState();
     _currentPath = widget.path;
-    _client = widget.client ?? SidecarClient();
-    if (widget.client == null) {
-      // 真实运行：加载连接信息 + 等待 sidecar 就绪后再加载 WebView
-      _initClient();
-    } else if (_client!.isConfigured) {
-      // 调用方（kb_page / notes_page）已 loadConnection：校验服务可达后加载，
-      // 避免 sidecar 进程未就绪时 WebView 加载必失败的 URL → 白屏。
-      _initClientWithConfigured();
-    } else {
-      // 测试注入且未配置：直接采用其 baseUrl（测试约定已预置就绪）
-      _univerUrl = '${widget.client!.baseUrl}/univer/index.html';
-    }
-  }
-
-  Future<void> _initClientWithConfigured() async {
-    try {
-      await _ensureSidecarReady();
-      if (!mounted) return;
-      setState(() => _univerUrl = '${_client!.baseUrl}/univer/index.html');
-    } catch (e) {
-      if (mounted) setState(() => _status = 'sidecar 未连接：$e');
-    }
-  }
-
-  Future<void> _initClient() async {
-    try {
-      await _loadConnectionWithStartup();
-      // loadConnection 只读取 .sidecar.json 配置文件，不保证 sidecar 进程已就绪。
-      // 若此时直接设置 _univerUrl，WebView 会去加载一个连接被拒的地址 → 白屏。
-      // 因此先探测 /api/health，不可达则确保启动 sidecar 并轮询等待就绪。
-      await _ensureSidecarReady();
-      if (!mounted) return;
-      setState(() => _univerUrl = '${_client!.baseUrl}/univer/index.html');
-    } catch (e) {
-      if (mounted) setState(() => _status = 'sidecar 未连接：$e');
-    }
-  }
-
-  /// 加载 sidecar 连接信息；若配置文件尚不存在，先拉起 sidecar 等待其生成再读取。
-  Future<void> _loadConnectionWithStartup() async {
-    try {
-      await _client!.loadConnection();
-    } catch (_) {
-      // 尚无 .sidecar.json：可能是应用刚启动、sidecar 进程尚未生成配置。
-      // SidecarLifecycle.start() 幂等：已有实例则复用，否则启动新进程。
-      await SidecarLifecycle.instance.start();
-      final deadline = DateTime.now().add(const Duration(seconds: 15));
-      while (DateTime.now().isBefore(deadline)) {
-        try {
-          await _client!.loadConnection();
-          return;
-        } catch (_) {
-          await Future<void>.delayed(const Duration(milliseconds: 500));
-        }
-      }
-      throw const SidecarUnavailableException('sidecar 配置尚未生成（等待超时）');
-    }
-  }
-
-  /// 确保 sidecar 服务真正可达（否则 WebView 加载必失败，表现为空白页）。
-  Future<void> _ensureSidecarReady() async {
-    // 再次调用幂等：sidecar 进程已在跑则复用，否则拉起（防止 _loadConnectionWithStartup
-    // 成功但进程恰好在启动间隙未监听端口的竞态）。
-    await SidecarLifecycle.instance.start();
-    final deadline = DateTime.now().add(const Duration(seconds: 20));
-    while (DateTime.now().isBefore(deadline)) {
-      try {
-        await _client!.health().timeout(const Duration(seconds: 2));
-        return;
-      } catch (_) {
-        // sidecar 仍在启动（或刚启动完尚未监听端口）：短暂等待后重试
-        if (mounted) setState(() => _status = '正在启动表格服务…');
-        await Future<void>.delayed(const Duration(milliseconds: 500));
-      }
-    }
-    throw const SidecarUnavailableException('sidecar 服务未就绪（等待超时）');
+    _client = widget.client ??
+        KbRustClient(dataDir: KbRustClient.defaultDataDir ?? '');
+    // Rust 客户端本地直读，无需等待服务就绪；直接加载 Univer
+    _univerUrl = widget.htmlUrl();
   }
 
   Future<void> _onSheetReady() async {
@@ -169,8 +90,8 @@ class _SheetEditorPageState extends State<SheetEditorPage> {
       }
       String? base64 = widget.initialBase64;
       if (base64 == null || base64.isEmpty) {
-        final data = await _client!.readXlsx(path);
-        base64 = data['content_base64'] as String?;
+        final read = await _client!.readXlsx(path);
+        base64 = read.isEmpty ? null : read;
       }
       if (base64 == null || base64.isEmpty) {
         if (mounted) {

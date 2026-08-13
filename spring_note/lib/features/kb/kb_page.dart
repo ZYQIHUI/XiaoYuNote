@@ -294,11 +294,11 @@ class _KbPageState extends State<KbPage> {
     });
   }
 
-  /// 用系统文件管理器打开知识库数据目录（data_dir 来自 sidecar health）。
+  /// 用系统文件管理器打开知识库数据目录。
   Future<void> _openFolder() async {
-    final dataDir = _health?['data_dir'] as String?;
+    final dataDir = KbRustClient.defaultDataDir;
     if (dataDir == null || dataDir.isEmpty) {
-      _appendStatus('无法获取知识库目录（sidecar 未连接）');
+      _appendStatus('无法获取知识库目录');
       return;
     }
     final ok = await const ExternalLinkService().openFolder(dataDir);
@@ -315,13 +315,7 @@ class _KbPageState extends State<KbPage> {
       return;
     }
     if (source.endsWith('.xlsx') || source.endsWith('.xls')) {
-      final client = SidecarClient();
-      try {
-        await client.loadConnection();
-      } catch (_) {
-        _appendStatus('sidecar 未连接，无法打开表格');
-        return;
-      }
+      final client = KbRustClient(dataDir: KbRustClient.defaultDataDir ?? '');
       if (!mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute<void>(
@@ -393,12 +387,12 @@ class _KbPageState extends State<KbPage> {
         children: [
           Icon(Icons.cloud_off, size: 56, color: colors.textMuted),
           const SizedBox(height: 12),
-          Text('sidecar 未连接', style: TextStyle(color: colors.textMuted, fontSize: 16)),
+          Text('知识库未就绪', style: TextStyle(color: colors.textMuted, fontSize: 16)),
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Text(
-              _error ?? '请先启动 Python 侧车服务（python -m sidecar）',
+              _error ?? '请先在设置中配置 AI 供应商，然后点击「立即索引」',
               textAlign: TextAlign.center,
               style: TextStyle(color: colors.textMuted, fontSize: 12),
             ),

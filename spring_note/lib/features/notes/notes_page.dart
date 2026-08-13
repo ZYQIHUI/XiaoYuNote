@@ -17,7 +17,6 @@ import '../../core/services/local_data_service.dart';
 import '../../core/services/note_service.dart';
 import '../../core/services/pasted_image_service.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/services/sidecar_client.dart';
 import '../../features/kb/kb_page.dart';
 import '../sheets/sheet_editor_page.dart';
 import 'kb_file_tree_panel.dart';
@@ -583,15 +582,7 @@ class _NotesPageState extends State<NotesPage> {
 
     // xlsx：全屏表格编辑器（push 打开，避免内嵌 WebView2 白屏/返回异常）
     if (path.endsWith('.xlsx') || path.endsWith('.xls')) {
-      final client = SidecarClient();
-      try {
-        await client.loadConnection();
-      } catch (e) {
-        if (mounted) {
-          setState(() => _statusText = 'sidecar 未连接，无法打开表格');
-        }
-        return;
-      }
+      final client = KbRustClient(dataDir: KbRustClient.defaultDataDir ?? '');
       if (!mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute<void>(
@@ -3289,13 +3280,7 @@ class _KbAskDialogState extends State<KbAskDialog> {
       }
     } catch (e) {
       if (mounted) {
-        final String msg;
-        if (e is SidecarUnavailableException) {
-          msg = e.message;
-        } else {
-          msg = '$e';
-        }
-        setState(() => _error = msg);
+        setState(() => _error = '$e');
       }
     }
   }

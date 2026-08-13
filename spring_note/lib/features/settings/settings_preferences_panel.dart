@@ -1652,94 +1652,14 @@ class _DataDirectorySettingRowState extends State<_DataDirectorySettingRow> {
 
 enum _DataDirectoryActionIconType { folderUp }
 
-/// 知识库文件夹管理：添加/移除多个文件夹作为知识库来源（sidecar extra_sources）。
-class _KbFoldersSettingRow extends StatefulWidget {
+/// 知识库索引范围：Rust 自动索引数据目录内文件。
+class _KbFoldersSettingRow extends StatelessWidget {
   const _KbFoldersSettingRow();
-
-  @override
-  State<_KbFoldersSettingRow> createState() => _KbFoldersSettingRowState();
-}
-
-class _KbFoldersSettingRowState extends State<_KbFoldersSettingRow> {
-  List<String> _folders = [];
-  bool _loading = false;
-  bool _saving = false;
-  bool _loadedOnce = false;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    // 惰性加载：不自动连 sidecar，避免测试环境网络泄漏
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final client = SidecarClient();
-      await client.loadConnection();
-      final cfg = await client.config();
-      if (mounted) {
-        setState(() {
-          _folders = (cfg['extra_sources'] as List? ?? [])
-              .map((e) => e.toString())
-              .toList();
-          _loadedOnce = true;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-        });
-      }
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _addFolder() async {
-    // 首次操作前先加载当前列表（避免覆盖 sidecar 已有配置）
-    if (!_loadedOnce) {
-      await _load();
-      if (!mounted) return;
-    }
-    final path = await getDirectoryPath(
-      confirmButtonText: l10n(context).settingsSelectThisFolder,
-    );
-    if (path == null || path.trim().isEmpty) return;
-    if (_folders.contains(path.trim())) return;
-    await _save([..._folders, path.trim()]);
-  }
-
-  Future<void> _removeFolder(int index) async {
-    final next = [..._folders]..removeAt(index);
-    await _save(next);
-  }
-
-  Future<void> _save(List<String> folders) async {
-    setState(() {
-      _saving = true;
-      _error = null;
-    });
-    try {
-      final client = SidecarClient();
-      await client.loadConnection();
-      await client.setConfig({'extra_sources': folders});
-      if (mounted) setState(() => _folders = folders);
-    } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final strings = l10n(context);
+    final dataDir = KbRustClient.defaultDataDir ?? '';
     return _SettingRowShell(
       label: strings.settingsKbFolders,
       description: strings.settingsKbFoldersDescription,
@@ -1749,59 +1669,14 @@ class _KbFoldersSettingRowState extends State<_KbFoldersSettingRow> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            for (var i = 0; i < _folders.length; i++)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        _folders[i],
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.colors(context).textMuted,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    InkWell(
-                      onTap: _saving ? null : () => _removeFolder(i),
-                      child: Padding(
-                        padding: const EdgeInsets.all(4),
-                        child: Icon(
-                          Icons.close,
-                          size: 15,
-                          color: AppTheme.colors(context).textMuted,
-                        ),
-                      ),
-                    ),
-                  ],
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text(
+                dataDir.isEmpty ? '数据目录内文件自动索引' : '数据目录内文件自动索引：$dataDir',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.colors(context).textMuted,
                 ),
-              ),
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Text(
-                  _error!,
-                  style: const TextStyle(fontSize: 12, color: Color(0xFFDC2626)),
-                ),
-              ),
-            OutlinedButton.icon(
-              onPressed: _loading || _saving ? null : _addFolder,
-              icon: _saving
-                  ? const SizedBox(
-                      width: 12,
-                      height: 12,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.add, size: 15),
-              label: Text(strings.settingsKbAddFolder),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                minimumSize: const Size(0, 30),
-                textStyle: const TextStyle(fontSize: 12),
               ),
             ),
           ],

@@ -323,11 +323,21 @@ pub fn kb_write_text(data_dir: String, path: String, content: String) -> Result<
     std::fs::write(&full, content).map_err(|e| e.to_string())
 }
 
-/// 读取 xlsx（base64）。
+/// 读取表格文件（base64）。xlsx 直接读；老式 .xls 用 calamine 读取后转 xlsx。
 pub fn kb_read_xlsx(data_dir: String, path: String) -> Result<String, String> {
     let full = resolve_path(&data_dir, &path)?;
-    let bytes = std::fs::read(&full).map_err(|e| e.to_string())?;
-    Ok(base64_encode(&bytes))
+    let ext = full
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+    if ext == "xls" {
+        let bytes = super::xlsx_writer::xls_to_xlsx_bytes(&full)?;
+        Ok(base64_encode(&bytes))
+    } else {
+        let bytes = std::fs::read(&full).map_err(|e| e.to_string())?;
+        Ok(base64_encode(&bytes))
+    }
 }
 
 /// 写入 xlsx（base64）。

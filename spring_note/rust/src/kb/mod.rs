@@ -22,3 +22,4 @@ pub mod scanner;
 pub mod server;
 pub mod store;
 pub mod utils;
+pub mod xlsx_writer;

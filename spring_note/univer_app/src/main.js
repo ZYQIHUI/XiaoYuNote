@@ -79,9 +79,9 @@ function createUniver() {
   try {
     const configService = univer.__getInjector().get('univer.config-service');
     if (configService && configService.setConfig) {
-      configService.setConfig('DEFAULT_WORKSHEET_COLUMN_COUNT', 150);
+      configService.setConfig('DEFAULT_WORKSHEET_COLUMN_COUNT', 300);
       configService.setConfig('DEFAULT_WORKSHEET_ROW_COUNT', 500);
-      configService.setConfig('DEFAULT_WORKSHEET_COLUMN_WIDTH', 40);
+      configService.setConfig('DEFAULT_WORKSHEET_COLUMN_WIDTH', 36);
     }
   } catch (err) {
     // 配置失败不阻塞
@@ -207,12 +207,12 @@ function toUniverData(workbook) {
     const sheet = {
       id: sheetId,
       name,
-      // Univer 0.25 用 columnCount/rowCount（不是 colCount），默认列数 20
-      // 按数据 + 余量扩展，默认 150 列 / 500 行（覆盖常见宽表，避免显示不全）
+      // Univer 0.25 用 columnCount/rowCount（不是 colCount）
+      // 按数据 + 余量扩展，默认 300 列 / 500 行（覆盖宽表）
       rowCount: Math.max(maxRow + 50, 500),
-      columnCount: Math.max(maxCol + 30, 150),
-      // 默认列宽缩小，让视口显示更多列（Univer 默认 88px 太宽，只显示 ~14 列）
-      defaultColumnWidth: 40,
+      columnCount: Math.max(maxCol + 30, 300),
+      // 默认列宽缩小，让视口显示更多列（Univer 默认 88px 太宽）
+      defaultColumnWidth: 36,
       defaultRowHeight: 24,
       cellData,
     };
@@ -296,7 +296,7 @@ window.univerBridge = {
         name: '工作表',
         sheetOrder: ['sheet-1'],
         sheets: {
-          'sheet-1': { id: 'sheet-1', name: 'Sheet1', rowCount: 500, columnCount: 150, defaultColumnWidth: 40, cellData: {} },
+          'sheet-1': { id: 'sheet-1', name: 'Sheet1', rowCount: 500, columnCount: 300, defaultColumnWidth: 36, cellData: {} },
         },
       });
     }
